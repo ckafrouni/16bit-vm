@@ -32,3 +32,4 @@ struct RegisterFile
 };
 
 std::string to_string(Register reg);
+Register to_register(std::string reg);

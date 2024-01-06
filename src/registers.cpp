@@ -1,4 +1,6 @@
 #include <iostream>
+#include <string>
+#include <algorithm>
 
 #include "registers.hpp"
 #include "fmt.hpp"
@@ -80,4 +82,29 @@ std::string to_string(Register reg)
     default:
         return "UNKNOWN";
     }
+}
+
+Register to_register(std::string reg)
+{
+    std::transform(reg.begin(), reg.end(), reg.begin(), ::toupper);
+
+    if (reg == "R0")
+        return Register::R0;
+    else if (reg == "R1")
+        return Register::R1;
+    else if (reg == "R2")
+        return Register::R2;
+    else if (reg == "R3")
+        return Register::R3;
+    else if (reg == "ACC")
+        return Register::ACC;
+    else if (reg == "IP")
+        return Register::IP;
+    else if (reg == "SP")
+        return Register::SP;
+    else if (reg == "FP")
+        return Register::FP;
+
+    std::cerr << "Unknown register: " << reg << std::endl;
+    exit(1);
 }
