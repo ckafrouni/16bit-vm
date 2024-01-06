@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cstring>
 
 #include "fmt.hpp"
@@ -10,17 +11,24 @@
 
 #include "compiler/assm.hpp"
 
-int main()
+int main(int argc, char **argv)
 {
+    // Read file
+    std::ifstream file(argv[1]);
+    std::string source((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+
     // Compile
-    auto program = compile("mov $0x00 %r1\n"
-                           "loop:\n"
-                           // "push %r1\n"
-                           // "call 'std::putchar'\n"
-                           "inc %r1\n"
-                           "mov $0x05 %acc\n"
-                           "jne %r1 loop\n"
-                           "halt\n");
+    auto program = compile(source);
+
+    // auto program = compile("mov $0x00 %r1\n"
+    //                        "loop:\n"
+    //                        // "push %r1\n"
+    //                        // "call 'std::putchar'\n"
+    //                        "inc %r1\n"
+    //                        "mov $0x05 %acc\n"
+    //                        "jne %r1 loop\n"
+    //                        "halt\n");
 
     std::cout << fmt::colorize("## Compilation finished", fmt::FG_RED, fmt::BOLD) << std::endl;
     std::cout << fmt::colorize("# Size of program: ", fmt::FG_WHITE, fmt::BOLD) << program->size << std::endl;

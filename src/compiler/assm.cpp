@@ -2,6 +2,9 @@
 #include <iostream>
 #include <cstdint>
 #include <vector>
+#include <algorithm>
+#include <sstream>
+#include <map>
 
 #include "compiler/assm.hpp"
 
@@ -12,11 +15,6 @@
 #include "addr.hpp"
 #include "registers.hpp"
 #include "memory.hpp"
-
-#include <string>
-#include <sstream>
-#include <vector>
-#include <map>
 
 std::vector<std::string> split(const std::string &s, char delimiter)
 {
@@ -30,6 +28,13 @@ std::vector<std::string> split(const std::string &s, char delimiter)
     return tokens;
 }
 
+// std::string stripWhitespace(const std::string &input)
+// {
+//     std::string output = input;
+//     output.erase(std::remove_if(output.begin(), output.end(), ::isspace), output.end());
+//     return output;
+// }
+
 Memory *compile(std::string source)
 {
     auto program = new std::vector<uint8_t>();
@@ -39,6 +44,8 @@ Memory *compile(std::string source)
     auto lines = split(source, '\n');
     for (auto line : lines)
     {
+        // Strip whitespace
+
         std::cout << fmt::colorize("line: ", fmt::FG_YELLOW, fmt::BOLD) << line << std::endl;
         auto tokens = split(line, ' ');
         auto instruction = tokens[0];

@@ -31,13 +31,14 @@ if [ "$1" == "clean" ]; then
 fi
 
 if [ "$1" == "run" ]; then
-    echo -e "\033[0;31mRun the project...\033[0m"
     shift 1 # remove the first argument
 
     ./build.sh build
 
-    cd $build_dir
-    ./$EXECUTABLE $@
+    echo -e "\033[0;31mRun the project...\033[0m"
+    echo -e "\033[0;31mArguments: $@\033[0m"
+
+    ./$build_dir/$EXECUTABLE "$@"
     exit 0
 fi
 
