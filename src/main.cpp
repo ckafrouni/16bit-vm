@@ -13,7 +13,7 @@ int main()
     auto memory = Memory(memory_size);
     // auto s_addr = 0x00;
     auto s = "Hello, World!";
-    auto s2_addr = 0xbe00;
+    // auto s2_addr = 0xbe00;
     auto s2 = "I'm Chris!";
     memory.write(0x00, (uint8_t *)s, strlen(s));
     memory.write(0xbe00, (uint8_t *)s2, strlen(s2));
@@ -24,13 +24,18 @@ int main()
             0xbeef, // R1
             0xaaaa, // R2
             0xbbbb, // R3
+            0x0000, // ACC
             0x0000, // IP
+            0x0000, // SP
+            0x0000, // FP
         },
     };
 
     Interpreter interpreter = {
         .memory = memory,
         .registers = rf,
+        .modified_register = IP,
+        .running = false,
     };
 
     interpreter.memory.inspect();
@@ -42,21 +47,36 @@ int main()
 
     // MOV_LIT_REG 0x05 R1
     addr += program.write8(addr, (uint8_t)OpCode::MOV_LIT_REG);
-    addr += program.write32(addr, 0x12121212);
+    addr += program.write32(addr, 0x01);
     addr += program.write8(addr, (uint8_t)Register::R1);
 
-    // STORE_LIT_MEM 0xffffffff "Hey" // H: 0x48, e: 0x65, y: 0x79
-    addr += program.write8(addr, (uint8_t)OpCode::STORE_LIT_MEM);
-    addr += program.write32(addr, 0x486579);
-    addr += program.write32(addr, 0x1234);
+    auto loop = addr;
+    // INC_REG R1
+    addr += program.write8(addr, (uint8_t)OpCode::INC_REG);
+    addr += program.write8(addr, (uint8_t)Register::R1);
 
-    // LOAD_MEM_REG 0x1234 R0
-    addr += program.write8(addr, (uint8_t)OpCode::LOAD_MEM_REG);
-    addr += program.write32(addr, 0x1234);
-    addr += program.write8(addr, (uint8_t)Register::R0);
+    // MOV_LIT_REG 0x05 ACC
+    addr += program.write8(addr, (uint8_t)OpCode::MOV_LIT_REG);
+    addr += program.write32(addr, 0x05);
+    addr += program.write8(addr, (uint8_t)Register::ACC);
+
+    // JMP_NE R1 0x00
+    addr += program.write8(addr, (uint8_t)OpCode::JMP_NE);
+    addr += program.write8(addr, (uint8_t)Register::R1);
+    addr += program.write32(addr, loop);
+
+    // // STORE_LIT_MEM 0xffffffff "Hey" // H: 0x48, e: 0x65, y: 0x79
+    // addr += program.write8(addr, (uint8_t)OpCode::STORE_LIT_MEM);
+    // addr += program.write32(addr, 0x486579);
+    // addr += program.write32(addr, 0x1234);
+
+    // // LOAD_MEM_REG 0x1234 R0
+    // addr += program.write8(addr, (uint8_t)OpCode::LOAD_MEM_REG);
+    // addr += program.write32(addr, 0x1234);
+    // addr += program.write8(addr, (uint8_t)Register::R0);
 
     // RETURN
-    addr += program.write8(addr, (uint8_t)OpCode::RETURN); // RETURN
+    addr += program.write8(addr, (uint8_t)OpCode::HALT); // RETURN
 
     std::cout << "Program:" << std::endl;
     program.inspect();

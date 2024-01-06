@@ -12,18 +12,15 @@ enum Register
     R3,
 
     // Special registers
-    IP,
+    ACC, // Accumulator
+    IP,  // Instruction Pointer
+    SP,  // Stack Pointer
+    FP,  // Frame Pointer
 };
 
 struct RegisterFile
 {
-    uint32_t registers[5]{
-        0x00000000, // R0
-        0x00000000, // R1
-        0x00000000, // R2
-        0x00000000, // R3
-        0x00000000, // IP
-    };
+    uint32_t registers[8];
 
     uint32_t &operator[](Register reg);
 

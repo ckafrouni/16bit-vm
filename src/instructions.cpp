@@ -6,6 +6,8 @@ std::string to_string(OpCode op)
 {
     switch (op)
     {
+    case OpCode::HALT:
+        return "HALT";
     case OpCode::RETURN:
         return "RETURN";
     case OpCode::MOV_LIT_REG:
@@ -24,6 +26,14 @@ std::string to_string(OpCode op)
         return "ADD_LIT_REG";
     case OpCode::ADD_REG_REG:
         return "ADD_REG_REG";
+    case OpCode::INC_REG:
+        return "INC_REG";
+    case OpCode::INC_MEM:
+        return "INC_MEM";
+    case OpCode::DEC_REG:
+        return "DEC_REG";
+    case OpCode::DEC_MEM:
+        return "DEC_MEM";
     case OpCode::SUB_LIT_REG:
         return "SUB_LIT_REG";
     case OpCode::SUB_REG_REG:
@@ -42,10 +52,6 @@ std::string to_string(OpCode op)
         return "JMP_LE";
     case OpCode::JMP:
         return "JMP";
-    case OpCode::CMP_LIT_REG:
-        return "CMP_LIT_REG";
-    case OpCode::CMP_REG_REG:
-        return "CMP_REG_REG";
     default:
         return "UNKNOWN";
     }

@@ -16,6 +16,7 @@ std::string RegisterFile::to_string()
     str += colorize("| ", FG_CYAN, BOLD) + colorize("IP", FG_PURPLE, BOLD) + " " + hexstr32(this->registers[Register::IP]) + "\n";
     str += colorize("| ", FG_CYAN, BOLD) + colorize("SP", FG_PURPLE, BOLD) + " " + colorize("0xTODO", FG_BLACK) + "\n";
     str += colorize("| ", FG_CYAN, BOLD) + colorize("FP", FG_PURPLE, BOLD) + " " + colorize("0xTODO", FG_BLACK) + "\n";
+    str += colorize("| ", FG_CYAN, BOLD) + colorize("ACC", FG_PURPLE, BOLD) + " " + hexstr32(this->registers[Register::ACC]) + "\n";
     for (size_t i = Register::R0; i <= Register::R3; i++)
     {
         auto reg = colorize("R" + std::to_string(i), FG_GREEN, BOLD);
@@ -36,6 +37,10 @@ std::string RegisterFile::to_string(Register modified_register)
 
     str += colorize("| ", FG_CYAN, BOLD) + colorize("SP", FG_PURPLE, BOLD) + " " + colorize("0xTODO", FG_BLACK) + "\n";
     str += colorize("| ", FG_CYAN, BOLD) + colorize("FP", FG_PURPLE, BOLD) + " " + colorize("0xTODO", FG_BLACK) + "\n";
+    str += colorize("| ", FG_CYAN, BOLD) + colorize("ACC", FG_PURPLE, BOLD) + " " + hexstr32(this->registers[Register::ACC]);
+    if (modified_register == Register::ACC)
+        str += colorize(" *", FG_YELLOW, BOLD);
+    str += "\n";
     for (size_t i = Register::R0; i <= Register::R3; i++)
     {
         auto reg = colorize("R" + std::to_string(i), FG_GREEN, BOLD);

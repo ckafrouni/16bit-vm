@@ -9,7 +9,9 @@
 
 enum OpCode
 {
-    RETURN = 0x00,
+    HALT = 0x00,
+    CALL,
+    RETURN,
 
     MOV_LIT_REG,
     MOV_REG_REG,
@@ -26,6 +28,12 @@ enum OpCode
     SUB_LIT_REG,
     SUB_REG_REG,
 
+    INC_REG,
+    INC_MEM,
+
+    DEC_REG,
+    DEC_MEM,
+
     JMP_NE,
     JMP_EQ,
     JMP_GT,
@@ -33,9 +41,6 @@ enum OpCode
     JMP_GE,
     JMP_LE,
     JMP,
-
-    CMP_LIT_REG,
-    CMP_REG_REG,
 };
 
 /*
@@ -47,15 +52,15 @@ label addresses:
     func: 0x10
 
 main:
-    MOV_LIT_REG $0xffffffff R0
+    MOV $0xffffffff R0
     CALL func
     EXIT
 
 func:
-    MOV_LIT_REG $0x01 R1
-    MOV_LIT_REG $0x02 R2
-    ADD_REG_REG R1 R2
-    MOV_REG_REG R2 R0
+    MOV $0x01, R1
+    MOV $0x02, R2
+    ADD R1, R2
+    MOV R2, R0
     RETURN
 
 */
