@@ -52,21 +52,52 @@ Memory *compile(std::string source)
         std::cout << fmt::colorize("ip: ", fmt::FG_YELLOW, fmt::BOLD) << ip << std::endl;
 
         /** MOV instructions */
-        if (instruction == "mov_lit_reg")
+        if (instruction == "mov")
         {
-            std::cout << fmt::colorize("Compiling MOV_LIT_REG", fmt::Colors::FG_GREEN) << std::endl;
+            std::cout << fmt::colorize("Compiling MOV", fmt::Colors::FG_GREEN) << std::endl;
+            if (tokens[1][0] == '$')
+            {
+                std::cout << fmt::colorize("Compiling MOV_LIT_REG", fmt::Colors::FG_GREEN) << std::endl;
 
-            auto value = std::stoi(tokens[1], nullptr, 0);
-            auto reg = to_register(tokens[2]);
+                auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
+                auto reg = to_register(tokens[2].substr(1));
 
-            program->push_back(MOV_LIT_REG);
-            program->push_back(value >> 24);
-            program->push_back(value >> 16);
-            program->push_back(value >> 8);
-            program->push_back(value);
-            program->push_back(reg);
-            ip += 6;
+                program->push_back(MOV_LIT_REG);
+                program->push_back(value >> 24);
+                program->push_back(value >> 16);
+                program->push_back(value >> 8);
+                program->push_back(value);
+                program->push_back(reg);
+                ip += 6;
+            }
+            else
+            {
+                std::cout << fmt::colorize("Compiling MOV_REG_REG", fmt::Colors::FG_GREEN) << std::endl;
+
+                auto reg1 = to_register(tokens[1]);
+                auto reg2 = to_register(tokens[2]);
+
+                program->push_back(MOV_REG_REG);
+                program->push_back(reg1);
+                program->push_back(reg2);
+                ip += 3;
+            }
         }
+        // if (instruction == "mov_lit_reg")
+        // {
+        //     std::cout << fmt::colorize("Compiling MOV_LIT_REG", fmt::Colors::FG_GREEN) << std::endl;
+
+        //     auto value = std::stoi(tokens[1], nullptr, 0);
+        //     auto reg = to_register(tokens[2]);
+
+        //     program->push_back(MOV_LIT_REG);
+        //     program->push_back(value >> 24);
+        //     program->push_back(value >> 16);
+        //     program->push_back(value >> 8);
+        //     program->push_back(value);
+        //     program->push_back(reg);
+        //     ip += 6;
+        // }
         // TODO
 
         /** STORE instructions */
@@ -82,20 +113,28 @@ Memory *compile(std::string source)
         // TODO
 
         /** INC instructions */
-        else if (instruction == "inc_reg")
+        else if (instruction == "inc")
         {
-            std::cout << fmt::colorize("Compiling INC_REG", fmt::Colors::FG_GREEN) << std::endl;
+            std::cout << fmt::colorize("Compiling INC", fmt::Colors::FG_GREEN) << std::endl;
+            // inc r1
             program->push_back(INC_REG);
-            program->push_back(to_register(tokens[1]));
+            program->push_back(to_register(tokens[1].substr(1)));
             ip += 2;
         }
+        // else if (instruction == "inc_reg")
+        // {
+        //     std::cout << fmt::colorize("Compiling INC_REG", fmt::Colors::FG_GREEN) << std::endl;
+        //     program->push_back(INC_REG);
+        //     program->push_back(to_register(tokens[1]));
+        //     ip += 2;
+        // }
         // TODO
 
         /** DEC instructions */
         // TODO
 
         /** JMP instructions */
-        else if (instruction == "jmp_ne")
+        else if (instruction == "jne")
         {
             std::cout << fmt::colorize("Compiling JMP_NE", fmt::Colors::FG_GREEN) << std::endl;
             // jmp_ne r1 loop (loop is a label -> 32bit address)
@@ -104,7 +143,7 @@ Memory *compile(std::string source)
             auto label_address = label_addresses[label];
 
             program->push_back(JMP_NE);
-            program->push_back(to_register(tokens[1])); // r1
+            program->push_back(to_register(tokens[1].substr(1)));
             program->push_back(label_address >> 24);
             program->push_back(label_address >> 16);
             program->push_back(label_address >> 8);

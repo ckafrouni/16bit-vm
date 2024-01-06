@@ -13,11 +13,13 @@
 int main()
 {
     // Compile
-    auto program = compile("mov_lit_reg 0x00 r1\n"
+    auto program = compile("mov $0x00 %r1\n"
                            "loop:\n"
-                           "inc_reg r1\n"
-                           "mov_lit_reg 0x05 acc\n"
-                           "jmp_ne r1 loop\n"
+                           // "push %r1\n"
+                           // "call 'std::putchar'\n"
+                           "inc %r1\n"
+                           "mov $0x05 %acc\n"
+                           "jne %r1 loop\n"
                            "halt\n");
 
     std::cout << fmt::colorize("## Compilation finished", fmt::FG_RED, fmt::BOLD) << std::endl;
