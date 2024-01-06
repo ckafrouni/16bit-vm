@@ -38,4 +38,26 @@ enum OpCode
     CMP_REG_REG,
 };
 
+/*
+
+Example program:
+
+label addresses:
+    main: 0x00
+    func: 0x10
+
+main:
+    MOV_LIT_REG $0xffffffff R0
+    CALL func
+    EXIT
+
+func:
+    MOV_LIT_REG $0x01 R1
+    MOV_LIT_REG $0x02 R2
+    ADD_REG_REG R1 R2
+    MOV_REG_REG R2 R0
+    RETURN
+
+*/
+
 std::string to_string(OpCode op);
