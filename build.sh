@@ -18,8 +18,8 @@ if [ "$mode" == "build" ]; then
 
     mkdir -p $build_dir
     cd $build_dir
-    cmake ..
-    make
+    cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ..
+    make -j
     cd ..
     exit 0
 fi

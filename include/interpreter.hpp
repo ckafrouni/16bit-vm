@@ -2,7 +2,6 @@
 
 #include <cstdint>
 
-#include "hexutils.hpp"
 #include "instructions.hpp"
 #include "memory.hpp"
 #include "registers.hpp"

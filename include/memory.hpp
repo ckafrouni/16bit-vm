@@ -2,8 +2,6 @@
 
 #include <cstdint>
 
-#include "hexutils.hpp"
-#include "fmt.hpp"
 #include "addr.hpp"
 
 struct Memory

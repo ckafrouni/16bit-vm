@@ -9,3 +9,5 @@ include_directories(SYSTEM RECURSE "include")
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(vm ${SOURCES}) # TODO: change executable name
+# Enable verbose output
+set(CMAKE_COMMAND "${CMAKE_COMMAND}" --verbose)

@@ -2,9 +2,10 @@
 #include <cstring>
 #include <iostream>
 
+#include "utils/fmt.hpp"
+#include "utils/hexutils.hpp"
+
 #include "memory.hpp"
-#include "hexutils.hpp"
-#include "fmt.hpp"
 
 Memory::Memory(uint32_t size) : size(size)
 {
@@ -75,20 +76,20 @@ size_t Memory::write32(Addr address, uint32_t value)
 
 void Memory::inspect()
 {
-    using namespace fmt;
+    using namespace utils;
     auto columns = 16;
     auto rows = this->size / columns;
 
     std::cout << colorize("MEMORY", FG_BLUE, BOLD) << std::endl;
     std::cout << colorize("|", FG_BLUE, BOLD) << colorize(" Size: ", FG_GREEN, BOLD) << colorize(std::to_string(this->size) + " bytes", FG_BWHITE, BOLD) << std::endl;
-    std::cout << colorize("|", FG_BLUE, BOLD) << colorize(" Addressable Range: ", FG_GREEN, BOLD) << colorize("0x0000", FG_BWHITE, BOLD) << colorize(" - ", FG_BLUE, BOLD) << colorize(hexstr32(this->size), FG_BWHITE, BOLD) << std::endl;
+    std::cout << colorize("|", FG_BLUE, BOLD) << colorize(" Addressable Range: ", FG_GREEN, BOLD) << colorize("0x0000", FG_BWHITE, BOLD) << colorize(" - ", FG_BLUE, BOLD) << colorize(utils::hexstr32(this->size), FG_BWHITE, BOLD) << std::endl;
     std::cout << this->to_string(rows, columns);
     std::cout << colorize("END MEMORY", FG_BLUE, BOLD) << std::endl;
 }
 
 std::string Memory::to_string(uint32_t rows, uint32_t columns)
 {
-    using namespace fmt;
+    using namespace utils;
     std::string str = "";
     bool empty = false;
     bool prev_empty = false;
@@ -116,7 +117,7 @@ std::string Memory::to_string(uint32_t rows, uint32_t columns)
             continue;
         else
             prev_empty = false;
-        str += colorize("| " + hexstr32(i * columns), FG_BLUE, BOLD) + colorize(" | ", BOLD);
+        str += colorize("| " + utils::hexstr32(i * columns), FG_BLUE, BOLD) + colorize(" | ", BOLD);
         for (size_t j = 0; j < columns; j++)
         {
             if (j == 4 || j == 12)

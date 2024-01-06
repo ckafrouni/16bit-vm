@@ -2,7 +2,7 @@
 #include <fstream>
 #include <cstring>
 
-#include "fmt.hpp"
+#include "utils/fmt.hpp"
 #include "memory.hpp"
 #include "registers.hpp"
 #include "interpreter.hpp"
@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 {
     if (argc < 2)
     {
-        std::cerr << fmt::colorize("Usage: ", fmt::FG_RED, fmt::BOLD) << argv[0] << " <file>" << std::endl;
+        std::cerr << utils::colorize("Usage: ", utils::FG_RED, utils::BOLD) << argv[0] << " <file>" << std::endl;
     }
 
     // Read file
@@ -26,9 +26,9 @@ int main(int argc, char **argv)
     // Compile
     auto program = compile(source);
 
-    std::cout << fmt::colorize("## Compilation finished", fmt::FG_RED, fmt::BOLD) << std::endl;
-    std::cout << fmt::colorize("# Size of program: ", fmt::FG_WHITE, fmt::BOLD) << program->size << std::endl;
-    std::cout << fmt::colorize("# Program:", fmt::FG_WHITE, fmt::BOLD) << std::endl;
+    std::cout << utils::colorize("## Compilation finished", utils::FG_RED, utils::BOLD) << std::endl;
+    std::cout << utils::colorize("# Size of program: ", utils::FG_WHITE, utils::BOLD) << program->size << std::endl;
+    std::cout << utils::colorize("# Program:", utils::FG_WHITE, utils::BOLD) << std::endl;
     program->inspect();
     std::cout << std::endl;
 
@@ -63,14 +63,14 @@ int main(int argc, char **argv)
     };
 
     // Inspect before running
-    std::cout << fmt::colorize("## Inspection before running:", fmt::FG_RED, fmt::BOLD) << std::endl;
-    std::cout << fmt::colorize("# Memory:", fmt::FG_WHITE, fmt::BOLD) << std::endl;
+    std::cout << utils::colorize("## Inspection before running:", utils::FG_RED, utils::BOLD) << std::endl;
+    std::cout << utils::colorize("# Memory:", utils::FG_WHITE, utils::BOLD) << std::endl;
     interpreter.memory.inspect();
     std::cout << std::endl;
-    std::cout << fmt::colorize("# Registers:", fmt::FG_WHITE, fmt::BOLD) << std::endl;
+    std::cout << utils::colorize("# Registers:", utils::FG_WHITE, utils::BOLD) << std::endl;
     interpreter.registers.inspect();
     std::cout << std::endl;
-    std::cout << fmt::colorize("# Program:", fmt::FG_WHITE, fmt::BOLD) << std::endl;
+    std::cout << utils::colorize("# Program:", utils::FG_WHITE, utils::BOLD) << std::endl;
     program->inspect();
     std::cout << std::endl;
 

@@ -4,11 +4,12 @@
 
 #include "interpreter.hpp"
 
-#include "fmt.hpp"
+#include "utils/fmt.hpp"
+#include "utils/hexutils.hpp"
+
 #include "instructions.hpp"
 #include "memory.hpp"
 #include "registers.hpp"
-#include "hexutils.hpp"
 #include "addr.hpp"
 
 void push(Memory *memory, RegisterFile *registers, uint32_t val)
@@ -27,8 +28,10 @@ uint32_t pop(Memory *memory, RegisterFile *registers)
 
 bool Interpreter::step(Memory *program)
 {
+    using namespace Instructions;
+
     auto op = program->read8(registers[IP]);
-    std::cout << fmt::colorize("## Executing: " + to_string((OpCode)op), fmt::FG_RED, fmt::BOLD) << std::endl;
+    std::cout << utils::colorize("## Executing: " + to_string((OpCode)op), utils::FG_RED, utils::BOLD) << std::endl;
 
     switch (op)
     {
@@ -276,7 +279,7 @@ bool Interpreter::step(Memory *program)
     }
     default:
     {
-        std::cout << fmt::colorize("Unknown opcode: " + to_string((OpCode)op), fmt::FG_RED, fmt::BOLD) << std::endl;
+        std::cout << utils::colorize("Unknown opcode: " + to_string((OpCode)op), utils::FG_RED, utils::BOLD) << std::endl;
         running = false;
         registers[IP] += 1;
         modified_register = IP;
@@ -292,7 +295,7 @@ uint32_t Interpreter::run(Memory *program, Addr entry_point)
     registers[IP] = entry_point;
     running = true;
 
-    std::cout << colorize("## START OF PROGRAM", fmt::Colors::FG_RED, fmt::Styles::BOLD) << std::endl;
+    std::cout << colorize("## START OF PROGRAM", utils::Colors::FG_RED, utils::Styles::BOLD) << std::endl;
 
     while (step(program))
     {
@@ -300,8 +303,8 @@ uint32_t Interpreter::run(Memory *program, Addr entry_point)
     }
     auto ret = registers[R0];
 
-    std::cout << colorize("## END OF PROGRAM", fmt::Colors::FG_RED, fmt::Styles::BOLD) + " "
-              << colorize("R0 = " + hexstr32(ret), fmt::Colors::FG_WHITE, fmt::Styles::BOLD) << std::endl;
+    std::cout << colorize("## END OF PROGRAM", utils::Colors::FG_RED, utils::Styles::BOLD) + " "
+              << colorize("R0 = " + utils::hexstr32(ret), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
 
     return registers[R0];
 }
@@ -318,19 +321,19 @@ uint32_t Interpreter::run(Memory *program, Addr entry_point, Mode mode)
         running = true;
 
         registers.inspect(modified_register);
-        std::cout << fmt::colorize("## BREAK (Press a key to start)", fmt::Colors::FG_YELLOW, fmt::Styles::BOLD);
+        std::cout << utils::colorize("## BREAK (Press a key to start)", utils::Colors::FG_YELLOW, utils::Styles::BOLD);
         std::cin.get();
 
         while (step(program))
         {
             registers.inspect(modified_register);
-            std::cout << fmt::colorize("## BREAK (Press a key to continue)", fmt::Colors::FG_YELLOW, fmt::Styles::BOLD);
+            std::cout << utils::colorize("## BREAK (Press a key to continue)", utils::Colors::FG_YELLOW, utils::Styles::BOLD);
             std::cin.get();
         }
         auto ret = registers[R0];
 
-        std::cout << colorize("## END OF PROGRAM", fmt::Colors::FG_RED, fmt::Styles::BOLD) + " "
-                  << colorize("R0 = " + hexstr32(ret), fmt::Colors::FG_WHITE, fmt::Styles::BOLD) << std::endl;
+        std::cout << colorize("## END OF PROGRAM", utils::Colors::FG_RED, utils::Styles::BOLD) + " "
+                  << colorize("R0 = " + utils::hexstr32(ret), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
 
         return registers[R0];
     }

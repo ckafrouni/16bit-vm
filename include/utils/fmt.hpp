@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace fmt
+namespace utils
 {
     enum Colors
     {
