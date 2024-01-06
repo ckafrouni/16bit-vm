@@ -40,11 +40,14 @@ Memory *compile(std::string source)
     auto program = new std::vector<uint8_t>();
     auto ip = 0x00;
     auto label_addresses = std::map<std::string, Addr>();
+    auto unresolved_labels = std::map<std::string, Addr>();
 
     auto lines = split(source, '\n');
     for (auto line : lines)
     {
         // Strip whitespace
+        if (line.empty())
+            continue;
 
         std::cout << fmt::colorize("line: ", fmt::FG_YELLOW, fmt::BOLD) << line << std::endl;
         auto tokens = split(line, ' ');
@@ -89,23 +92,49 @@ Memory *compile(std::string source)
                 program->push_back(reg2);
                 ip += 3;
             }
+            // TODO
         }
-        // if (instruction == "mov_lit_reg")
-        // {
-        //     std::cout << fmt::colorize("Compiling MOV_LIT_REG", fmt::Colors::FG_GREEN) << std::endl;
 
-        //     auto value = std::stoi(tokens[1], nullptr, 0);
-        //     auto reg = to_register(tokens[2]);
+        /** PUSH instructions */
+        else if (instruction == "push")
+        {
+            std::cout << fmt::colorize("Compiling PUSH", fmt::Colors::FG_GREEN) << std::endl;
+            if (tokens[1][0] == '$')
+            {
+                std::cout << fmt::colorize("Compiling PUSH_LIT", fmt::Colors::FG_GREEN) << std::endl;
 
-        //     program->push_back(MOV_LIT_REG);
-        //     program->push_back(value >> 24);
-        //     program->push_back(value >> 16);
-        //     program->push_back(value >> 8);
-        //     program->push_back(value);
-        //     program->push_back(reg);
-        //     ip += 6;
-        // }
-        // TODO
+                auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
+
+                program->push_back(PUSH_LIT);
+                program->push_back(value >> 24);
+                program->push_back(value >> 16);
+                program->push_back(value >> 8);
+                program->push_back(value);
+                ip += 5;
+            }
+            else
+            {
+                std::cout << fmt::colorize("Compiling PUSH_REG", fmt::Colors::FG_GREEN) << std::endl;
+
+                auto reg = to_register(tokens[1].substr(1));
+
+                program->push_back(PUSH_REG);
+                program->push_back(reg);
+                ip += 2;
+            }
+            // TODO
+        }
+
+        /** POP instructions */
+        else if (instruction == "pop")
+        {
+            std::cout << fmt::colorize("Compiling POP", fmt::Colors::FG_GREEN) << std::endl;
+            auto reg = to_register(tokens[1].substr(1));
+
+            program->push_back(POP_REG);
+            program->push_back(reg);
+            ip += 2;
+        }
 
         /** STORE instructions */
         // TODO
@@ -114,7 +143,38 @@ Memory *compile(std::string source)
         // TODO
 
         /** ADD instructions */
-        // TODO
+        else if (instruction == "add")
+        {
+            std::cout << fmt::colorize("Compiling ADD", fmt::Colors::FG_GREEN) << std::endl;
+            if (tokens[1][0] == '$')
+            {
+                std::cout << fmt::colorize("Compiling ADD_LIT_REG", fmt::Colors::FG_GREEN) << std::endl;
+
+                auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
+                auto reg = to_register(tokens[2].substr(1));
+
+                program->push_back(ADD_LIT_REG);
+                program->push_back(value >> 24);
+                program->push_back(value >> 16);
+                program->push_back(value >> 8);
+                program->push_back(value);
+                program->push_back(reg);
+                ip += 6;
+            }
+            else
+            {
+                std::cout << fmt::colorize("Compiling ADD_REG_REG", fmt::Colors::FG_GREEN) << std::endl;
+
+                auto reg1 = to_register(tokens[1].substr(1));
+                auto reg2 = to_register(tokens[2].substr(1));
+
+                program->push_back(ADD_REG_REG);
+                program->push_back(reg1);
+                program->push_back(reg2);
+                ip += 3;
+            }
+            // TODO
+        }
 
         /** SUB instructions */
         // TODO
@@ -127,15 +187,8 @@ Memory *compile(std::string source)
             program->push_back(INC_REG);
             program->push_back(to_register(tokens[1].substr(1)));
             ip += 2;
+            // TODO
         }
-        // else if (instruction == "inc_reg")
-        // {
-        //     std::cout << fmt::colorize("Compiling INC_REG", fmt::Colors::FG_GREEN) << std::endl;
-        //     program->push_back(INC_REG);
-        //     program->push_back(to_register(tokens[1]));
-        //     ip += 2;
-        // }
-        // TODO
 
         /** DEC instructions */
         // TODO
@@ -157,14 +210,41 @@ Memory *compile(std::string source)
             program->push_back(label_address);
 
             ip += 6;
+            // TODO
         }
-        // TODO
 
         /** CALL instructions */
-        // TODO
+        else if (instruction == "call")
+        {
+            std::cout << fmt::colorize("Compiling CALL", fmt::Colors::FG_GREEN) << std::endl;
+            // call func (func is a label -> 32bit address)
+
+            auto label = tokens[1];
+            auto label_address = label_addresses[label];
+            if (label_addresses.find(label) == label_addresses.end())
+            {
+                std::cout << fmt::colorize("Unresolved label: ", fmt::FG_RED, fmt::BOLD) << label << std::endl;
+                unresolved_labels[label] = ip;
+            }
+            std::cout << fmt::colorize("label_address: ", fmt::FG_YELLOW, fmt::BOLD) << hexstr32(label_address) << std::endl;
+
+            program->push_back(CALL_LIT);
+            program->push_back(label_address >> 24);
+            program->push_back(label_address >> 16);
+            program->push_back(label_address >> 8);
+            program->push_back(label_address);
+
+            ip += 5;
+            // TODO
+        }
 
         /** RETURN instructions */
-        // TODO
+        else if (instruction == "ret")
+        {
+            std::cout << fmt::colorize("Compiling RETURN", fmt::Colors::FG_GREEN) << std::endl;
+            program->push_back(RETURN);
+            ip += 1;
+        }
 
         /** HALT instructions */
         else if (instruction == "halt")
@@ -185,11 +265,30 @@ Memory *compile(std::string source)
         else
         {
             std::cout << fmt::colorize("Unknown instruction: ", fmt::FG_RED, fmt::BOLD) << instruction << std::endl;
+            // print file name and line number
+            std::cout << fmt::colorize("Error on line: ", fmt::FG_RED, fmt::BOLD) << line << std::endl;
+            // print file name and line number of this cpp file
+            std::string f = __FILE__;
+            auto l = std::to_string(__LINE__);
+            std::cout << fmt::colorize(f + ":" + l, fmt::FG_RED, fmt::BOLD) << std::endl;
             exit(1);
         }
 
         // for (auto byte : *program)
         //      std::cout << fmt::colorize("byte: ", fmt::FG_YELLOW, fmt::BOLD) << hexstr16(byte) << std::endl;
+    }
+
+    // Resolve labels
+    for (auto const &[label, address] : unresolved_labels)
+    {
+        std::cout << fmt::colorize("Resolving label: ", fmt::FG_YELLOW, fmt::BOLD) << label << std::endl;
+        std::cout << fmt::colorize("Address: ", fmt::FG_YELLOW, fmt::BOLD) << hexstr32(address) << std::endl;
+        auto label_address = label_addresses[label];
+        std::cout << fmt::colorize("Label address: ", fmt::FG_YELLOW, fmt::BOLD) << hexstr32(label_address) << std::endl;
+        program->at(address + 1) = label_address >> 24;
+        program->at(address + 2) = label_address >> 16;
+        program->at(address + 3) = label_address >> 8;
+        program->at(address + 4) = label_address;
     }
 
     auto memory = new Memory(program->size());

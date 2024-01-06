@@ -37,8 +37,14 @@ std::string RegisterFile::to_string(Register modified_register)
         str += colorize(" *", FG_YELLOW, BOLD);
     str += "\n";
 
-    str += colorize("| ", FG_CYAN, BOLD) + colorize("SP ", FG_PURPLE, BOLD) + " " + colorize("0xTODO", FG_BLACK) + "\n";
-    str += colorize("| ", FG_CYAN, BOLD) + colorize("FP ", FG_PURPLE, BOLD) + " " + colorize("0xTODO", FG_BLACK) + "\n";
+    str += colorize("| ", FG_CYAN, BOLD) + colorize("SP ", FG_PURPLE, BOLD) + " " + hexstr32(this->registers[Register::SP]);
+    if (modified_register == Register::SP)
+        str += colorize(" *", FG_YELLOW, BOLD);
+    str += "\n";
+    str += colorize("| ", FG_CYAN, BOLD) + colorize("FP ", FG_PURPLE, BOLD) + " " + hexstr32(this->registers[Register::FP]);
+    if (modified_register == Register::FP)
+        str += colorize(" *", FG_YELLOW, BOLD);
+    str += "\n";
     str += colorize("| ", FG_CYAN, BOLD) + colorize("ACC", FG_PURPLE, BOLD) + " " + hexstr32(this->registers[Register::ACC]);
     if (modified_register == Register::ACC)
         str += colorize(" *", FG_YELLOW, BOLD);

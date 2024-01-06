@@ -13,6 +13,11 @@
 
 int main(int argc, char **argv)
 {
+    if (argc < 2)
+    {
+        std::cerr << fmt::colorize("Usage: ", fmt::FG_RED, fmt::BOLD) << argv[0] << " <file>" << std::endl;
+    }
+
     // Read file
     std::ifstream file(argv[1]);
     std::string source((std::istreambuf_iterator<char>(file)),
@@ -20,15 +25,6 @@ int main(int argc, char **argv)
 
     // Compile
     auto program = compile(source);
-
-    // auto program = compile("mov $0x00 %r1\n"
-    //                        "loop:\n"
-    //                        // "push %r1\n"
-    //                        // "call 'std::putchar'\n"
-    //                        "inc %r1\n"
-    //                        "mov $0x05 %acc\n"
-    //                        "jne %r1 loop\n"
-    //                        "halt\n");
 
     std::cout << fmt::colorize("## Compilation finished", fmt::FG_RED, fmt::BOLD) << std::endl;
     std::cout << fmt::colorize("# Size of program: ", fmt::FG_WHITE, fmt::BOLD) << program->size << std::endl;
@@ -54,8 +50,8 @@ int main(int argc, char **argv)
             0xbbbb, // R3
             0x0000, // ACC
             0x0000, // IP
-            0x0000, // SP
-            0x0000, // FP
+            0xffff, // SP
+            0xffff, // FP
         },
     };
 
@@ -79,7 +75,7 @@ int main(int argc, char **argv)
     std::cout << std::endl;
 
     // Run
-    auto ret = interpreter.run(program, 0x00, Mode::RELEASE);
+    auto ret = interpreter.run(program, 0x00, Mode::DEBUG);
     (void)ret;
 
     // Inspect

@@ -11,9 +11,24 @@
 #include "hexutils.hpp"
 #include "addr.hpp"
 
+void push(Memory *memory, RegisterFile *registers, uint32_t val)
+{
+    (*registers)[SP] -= 4;
+    memory->write32((*registers)[SP], val);
+    (*registers)[IP] += 5;
+}
+
+uint32_t pop(Memory *memory, RegisterFile *registers)
+{
+    auto val = memory->read32((*registers)[(Register)SP]);
+    (*registers)[(Register)SP] += 4;
+    return val;
+}
+
 bool Interpreter::step(Memory *program)
 {
     auto op = program->read8(registers[IP]);
+    std::cout << fmt::colorize("## Executing: " + to_string((OpCode)op), fmt::FG_RED, fmt::BOLD) << std::endl;
 
     switch (op)
     {
@@ -27,6 +42,27 @@ bool Interpreter::step(Memory *program)
     case RETURN:
     {
         // TODO after implementing the stack and CALL
+        break;
+    }
+    case PUSH_LIT:
+    {
+        auto lit = program->read32(registers[IP] + 1);
+        push(&memory, &registers, lit);
+        modified_register = SP;
+        break;
+    }
+    case PUSH_REG:
+    {
+        auto reg = program->read8(registers[IP] + 1);
+        push(&memory, &registers, registers[(Register)reg]);
+        modified_register = SP;
+        break;
+    }
+    case POP_REG:
+    {
+        auto reg = program->read8(registers[IP] + 1);
+        registers[(Register)reg] = pop(&memory, &registers);
+        modified_register = (Register)reg;
         break;
     }
     case MOV_LIT_REG:
@@ -218,6 +254,23 @@ bool Interpreter::step(Memory *program)
         {
             registers[IP] += 6;
         }
+        modified_register = IP;
+        break;
+    }
+
+    case CALL_LIT:
+    {
+        Addr addr = program->read32(registers[IP] + 1);
+        push(&memory, &registers, registers[IP] + 5); // return address
+        // push registers
+        push(&memory, &registers, registers[R0]);
+        push(&memory, &registers, registers[R1]);
+        push(&memory, &registers, registers[R2]);
+        push(&memory, &registers, registers[R3]);
+        push(&memory, &registers, registers[ACC]);
+
+        registers[FP] = registers[SP];
+        registers[IP] = addr;
         modified_register = IP;
         break;
     }
