@@ -239,17 +239,11 @@ uint32_t Interpreter::run(Memory *program, Addr entry_point)
     registers[IP] = entry_point;
     running = true;
 
-    registers.inspect(modified_register);
-    std::cout << fmt::colorize("## BREAK (Press a key to start)", fmt::Colors::FG_YELLOW, fmt::Styles::BOLD);
-    std::cin.get();
-
     std::cout << colorize("## START OF PROGRAM", fmt::Colors::FG_RED, fmt::Styles::BOLD) << std::endl;
 
     while (step(program))
     {
         registers.inspect(modified_register);
-        std::cout << fmt::colorize("## BREAK (Press a key to continue)", fmt::Colors::FG_YELLOW, fmt::Styles::BOLD);
-        std::cin.get();
     }
     auto ret = registers[R0];
 
@@ -257,4 +251,34 @@ uint32_t Interpreter::run(Memory *program, Addr entry_point)
               << colorize("R0 = " + hexstr32(ret), fmt::Colors::FG_WHITE, fmt::Styles::BOLD) << std::endl;
 
     return registers[R0];
+}
+
+uint32_t Interpreter::run(Memory *program, Addr entry_point, Mode mode)
+{
+    if (mode != Mode::DEBUG)
+    {
+        return run(program, entry_point);
+    }
+    else
+    {
+        registers[IP] = entry_point;
+        running = true;
+
+        registers.inspect(modified_register);
+        std::cout << fmt::colorize("## BREAK (Press a key to start)", fmt::Colors::FG_YELLOW, fmt::Styles::BOLD);
+        std::cin.get();
+
+        while (step(program))
+        {
+            registers.inspect(modified_register);
+            std::cout << fmt::colorize("## BREAK (Press a key to continue)", fmt::Colors::FG_YELLOW, fmt::Styles::BOLD);
+            std::cin.get();
+        }
+        auto ret = registers[R0];
+
+        std::cout << colorize("## END OF PROGRAM", fmt::Colors::FG_RED, fmt::Styles::BOLD) + " "
+                  << colorize("R0 = " + hexstr32(ret), fmt::Colors::FG_WHITE, fmt::Styles::BOLD) << std::endl;
+
+        return registers[R0];
+    }
 }

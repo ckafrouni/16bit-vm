@@ -71,7 +71,7 @@ int main()
     std::cout << std::endl;
 
     // Run
-    auto ret = interpreter.run(program, 0x00);
+    auto ret = interpreter.run(program, 0x00, Mode::RELEASE);
     (void)ret;
 
     // Inspect
