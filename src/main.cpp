@@ -1,30 +1,49 @@
 #include <iostream>
+#include <cstring>
+
+#include "memory.hpp"
+#include "registers.hpp"
+#include "interpreter.hpp"
 #include "instructions.hpp"
-#include "utils.hpp"
 
 int main()
 {
-    Interpreter Interpreter = {.registers = {0xFF, 0xFF, 0xFF, 0xFF}};
+    // Initialize
+    uint32_t memory_size = 0xbeef;
+    auto memory = Memory(memory_size);
+    auto s = "Hello, World!";
+    auto s2 = "I'm Chris!";
+    memory.write(0x00, (uint8_t *)s, strlen(s));
+    memory.write(0xbedb, (uint8_t *)s2, strlen(s2));
 
-    // Inspect
-    Interpreter.inspect();
-
-    Program program = {
-        new Instruction[]{
-            {MOV_LIT_REG, {0x00, Register::R0}}, // 0x00
-            {ADD_LIT_REG, {0x01, Register::R0}}, // 0x01
-            {CMP_LIT_REG, {0x05, Register::R0}},
-            {JMP_NE, {0x01, 0x00}},
-            {MOV_REG_REG, {Register::R0, Register::R1}},
-            {RETURN, {0x00, 0x00}},
+    auto rf = RegisterFile{
+        .registers = {
+            0xdead, // R0
+            0xbeef, // R1
+            0xaaaa, // R2
+            0xbbbb, // R3
+            0x0000, // IP
         },
-        6,
     };
 
-    // Disassemble
-    std::cout << disassemble(program) << std::endl;
+    Interpreter interpreter = {
+        .memory = memory,
+        .registers = rf,
+    };
+
+    interpreter.memory.inspect();
+    interpreter.registers.inspect();
+
+    auto program = Memory(0x1000);
+    auto main_addr = 0x00;
+    program.write8(main_addr, (uint8_t)OpCode::MOV_LIT_REG); // MOV_LIT_REG 0x05 R1
+    program.write32(main_addr + 1, 0x12121212);
+    program.write8(main_addr + 5, (uint8_t)Register::R1);
+    program.write8(main_addr + 6, (uint8_t)OpCode::RETURN); // RETURN
+
+    program.inspect();
 
     // Run
-    auto ret = Interpreter.run(program);
+    auto ret = interpreter.run(&program, main_addr);
     std::cout << "R0: " << hexstr16(ret) << std::endl;
 }
