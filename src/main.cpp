@@ -11,10 +11,12 @@ int main()
     // Initialize
     uint32_t memory_size = 0xbeef;
     auto memory = Memory(memory_size);
+    // auto s_addr = 0x00;
     auto s = "Hello, World!";
+    auto s2_addr = 0xbe00;
     auto s2 = "I'm Chris!";
     memory.write(0x00, (uint8_t *)s, strlen(s));
-    memory.write(0xbedb, (uint8_t *)s2, strlen(s2));
+    memory.write(0xbe00, (uint8_t *)s2, strlen(s2));
 
     auto rf = RegisterFile{
         .registers = {
@@ -43,10 +45,15 @@ int main()
     addr += program.write32(addr, 0x12121212);
     addr += program.write8(addr, (uint8_t)Register::R1);
 
-    // STORE_LIT_MEM 0xffffffff 0xdead
+    // STORE_LIT_MEM 0xffffffff "Hey" // H: 0x48, e: 0x65, y: 0x79
     addr += program.write8(addr, (uint8_t)OpCode::STORE_LIT_MEM);
-    addr += program.write32(addr, 0xffffffff);
+    addr += program.write32(addr, 0x486579);
     addr += program.write32(addr, 0x1234);
+
+    // LOAD_MEM_REG 0x1234 R0
+    addr += program.write8(addr, (uint8_t)OpCode::LOAD_MEM_REG);
+    addr += program.write32(addr, 0x1234);
+    addr += program.write8(addr, (uint8_t)Register::R0);
 
     // RETURN
     addr += program.write8(addr, (uint8_t)OpCode::RETURN); // RETURN
