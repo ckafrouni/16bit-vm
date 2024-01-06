@@ -10,6 +10,10 @@ std::string to_string(OpCode op)
         return "HALT";
     case OpCode::RETURN:
         return "RETURN";
+    case OpCode::CALL_LIT:
+        return "CALL_LIT";
+    case OpCode::CALL_REG:
+        return "CALL_REG";
     case OpCode::MOV_LIT_REG:
         return "MOV_LIT_REG";
     case OpCode::MOV_REG_REG:

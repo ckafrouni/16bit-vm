@@ -1,10 +1,12 @@
 #include <iostream>
 #include <cstring>
 
+#include "fmt.hpp"
 #include "memory.hpp"
 #include "registers.hpp"
 #include "interpreter.hpp"
 #include "instructions.hpp"
+#include "addr.hpp"
 
 int main()
 {
@@ -38,12 +40,9 @@ int main()
         .running = false,
     };
 
-    interpreter.memory.inspect();
-    interpreter.registers.inspect();
-
     auto program = Memory(0x1000);
-    auto main_addr = 0x00;
-    auto addr = main_addr;
+    Addr main_addr = 0x00;
+    Addr addr = main_addr;
 
     // MOV_LIT_REG 0x05 R1
     addr += program.write8(addr, (uint8_t)OpCode::MOV_LIT_REG);
@@ -78,15 +77,23 @@ int main()
     // RETURN
     addr += program.write8(addr, (uint8_t)OpCode::HALT); // RETURN
 
-    std::cout << "Program:" << std::endl;
+    // Inspect before running
+    std::cout << fmt::colorize("## Inspection before running:", fmt::FG_RED, fmt::BOLD) << std::endl;
+    std::cout << fmt::colorize("# Memory:", fmt::FG_WHITE, fmt::BOLD) << std::endl;
+    interpreter.memory.inspect();
+    std::cout << std::endl;
+    std::cout << fmt::colorize("# Registers:", fmt::FG_WHITE, fmt::BOLD) << std::endl;
+    interpreter.registers.inspect();
+    std::cout << std::endl;
+    std::cout << fmt::colorize("# Program:", fmt::FG_WHITE, fmt::BOLD) << std::endl;
     program.inspect();
     std::cout << std::endl;
 
     // Run
     auto ret = interpreter.run(&program, main_addr);
-    std::cout << "R0: " << hexstr16(ret) << std::endl;
 
     // Inspect
+    std::cout << std::endl;
     interpreter.memory.inspect();
     interpreter.registers.inspect();
 }

@@ -6,6 +6,7 @@
 #include "instructions.hpp"
 #include "memory.hpp"
 #include "registers.hpp"
+#include "addr.hpp"
 
 struct Interpreter
 {
@@ -14,6 +15,6 @@ struct Interpreter
     Register modified_register;
     bool running;
 
-    uint32_t run(Memory *program, uint32_t entry_point);
+    uint32_t run(Memory *program, Addr entry_point);
     bool step(Memory *program);
 };

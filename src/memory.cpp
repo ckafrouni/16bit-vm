@@ -17,7 +17,7 @@ Memory::~Memory()
     delete[] this->memory;
 }
 
-uint8_t *Memory::read(uint32_t address, size_t size)
+uint8_t *Memory::read(Addr address, size_t size)
 {
     uint8_t *data = new uint8_t[size];
     for (size_t i = 0; i < size; i++)
@@ -27,22 +27,22 @@ uint8_t *Memory::read(uint32_t address, size_t size)
     return data;
 }
 
-uint8_t Memory::read8(uint32_t address)
+uint8_t Memory::read8(Addr address)
 {
     return this->memory[address];
 }
 
-uint16_t Memory::read16(uint32_t address)
+uint16_t Memory::read16(Addr address)
 {
     return (this->memory[address] << 8) | this->memory[address + 1];
 }
 
-uint32_t Memory::read32(uint32_t address)
+uint32_t Memory::read32(Addr address)
 {
     return (this->memory[address] << 24) | (this->memory[address + 1] << 16) | (this->memory[address + 2] << 8) | this->memory[address + 3];
 }
 
-size_t Memory::write(uint32_t address, uint8_t *data, size_t size)
+size_t Memory::write(Addr address, uint8_t *data, size_t size)
 {
     for (size_t i = 0; i < size; i++)
     {
@@ -51,20 +51,20 @@ size_t Memory::write(uint32_t address, uint8_t *data, size_t size)
     return size;
 }
 
-size_t Memory::write8(uint32_t address, uint8_t value)
+size_t Memory::write8(Addr address, uint8_t value)
 {
     this->memory[address] = value;
     return 1;
 }
 
-size_t Memory::write16(uint32_t address, uint16_t value)
+size_t Memory::write16(Addr address, uint16_t value)
 {
     this->memory[address] = (value >> 8) & 0xFF;
     this->memory[address + 1] = value & 0xFF;
     return 2;
 }
 
-size_t Memory::write32(uint32_t address, uint32_t value)
+size_t Memory::write32(Addr address, uint32_t value)
 {
     this->memory[address] = (value >> 24) & 0xFF;
     this->memory[address + 1] = (value >> 16) & 0xFF;
@@ -79,11 +79,11 @@ void Memory::inspect()
     auto columns = 16;
     auto rows = this->size / columns;
 
-    std::cout << colorize("# MEMORY", FG_BLUE, BOLD) << std::endl;
+    std::cout << colorize("MEMORY", FG_BLUE, BOLD) << std::endl;
     std::cout << colorize("|", FG_BLUE, BOLD) << colorize(" Size: ", FG_GREEN, BOLD) << colorize(std::to_string(this->size) + " bytes", FG_BWHITE, BOLD) << std::endl;
     std::cout << colorize("|", FG_BLUE, BOLD) << colorize(" Addressable Range: ", FG_GREEN, BOLD) << colorize("0x0000", FG_BWHITE, BOLD) << colorize(" - ", FG_BLUE, BOLD) << colorize(hexstr32(this->size), FG_BWHITE, BOLD) << std::endl;
     std::cout << this->to_string(rows, columns);
-    std::cout << colorize("# END MEMORY", FG_BLUE, BOLD) << std::endl;
+    std::cout << colorize("END MEMORY", FG_BLUE, BOLD) << std::endl;
 }
 
 std::string Memory::to_string(uint32_t rows, uint32_t columns)

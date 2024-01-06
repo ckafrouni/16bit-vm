@@ -9,11 +9,11 @@
 #include "memory.hpp"
 #include "registers.hpp"
 #include "hexutils.hpp"
+#include "addr.hpp"
 
 bool Interpreter::step(Memory *program)
 {
     auto op = program->read8(registers[IP]);
-    std::cout << "OP: " << to_string((OpCode)op) << std::endl;
 
     switch (op)
     {
@@ -33,7 +33,6 @@ bool Interpreter::step(Memory *program)
     {
         auto lit = program->read32(registers[IP] + 1);
         auto reg = program->read8(registers[IP] + 5);
-        std::cout << "MOV_LIT_REG $" << hexstr32(lit) << ", " << to_string((Register)reg) << std::endl;
         modified_register = (Register)reg;
         registers[modified_register] = lit;
         registers[IP] += 6;
@@ -51,7 +50,7 @@ bool Interpreter::step(Memory *program)
     case STORE_LIT_MEM:
     {
         auto lit = program->read32(registers[IP] + 1);
-        auto addr = program->read32(registers[IP] + 5);
+        Addr addr = program->read32(registers[IP] + 5);
         memory.write32(addr, lit);
         registers[IP] += 9;
         modified_register = IP;
@@ -60,7 +59,7 @@ bool Interpreter::step(Memory *program)
     case STORE_REG_MEM:
     {
         auto reg = program->read8(registers[IP] + 1);
-        auto addr = program->read32(registers[IP] + 2);
+        Addr addr = program->read32(registers[IP] + 2);
         memory.write32(addr, registers[(Register)reg]);
         registers[IP] += 6;
         modified_register = IP;
@@ -78,7 +77,7 @@ bool Interpreter::step(Memory *program)
     }
     case LOAD_MEM_REG:
     {
-        auto addr = program->read32(registers[IP] + 1);
+        Addr addr = program->read32(registers[IP] + 1);
         auto reg = program->read8(registers[IP] + 5);
         modified_register = (Register)reg;
         registers[modified_register] = memory.read32(addr);
@@ -131,7 +130,7 @@ bool Interpreter::step(Memory *program)
     }
     case INC_MEM:
     {
-        auto addr = program->read32(registers[IP] + 1);
+        Addr addr = program->read32(registers[IP] + 1);
         auto val = memory.read32(addr);
         memory.write32(addr, val + 1);
         registers[IP] += 5;
@@ -148,7 +147,7 @@ bool Interpreter::step(Memory *program)
     }
     case DEC_MEM:
     {
-        auto addr = program->read32(registers[IP] + 1);
+        Addr addr = program->read32(registers[IP] + 1);
         auto val = memory.read32(addr);
         memory.write32(addr, val - 1);
         registers[IP] += 5;
@@ -157,7 +156,7 @@ bool Interpreter::step(Memory *program)
     }
     case JMP:
     {
-        auto addr = program->read32(registers[IP] + 1);
+        Addr addr = program->read32(registers[IP] + 1);
         registers[IP] = addr;
         modified_register = IP;
         break;
@@ -165,7 +164,7 @@ bool Interpreter::step(Memory *program)
     case JMP_NE: // JMP_NE Rx <addr>
     {
         auto reg = program->read8(registers[IP] + 1);
-        auto addr = program->read32(registers[IP] + 2);
+        Addr addr = program->read32(registers[IP] + 2);
         if (registers[ACC] != registers[(Register)reg])
         {
             registers[IP] = addr;
@@ -180,7 +179,7 @@ bool Interpreter::step(Memory *program)
     case JMP_EQ: // JMP_EQ Rx <addr>
     {
         auto reg = program->read8(registers[IP] + 1);
-        auto addr = program->read32(registers[IP] + 2);
+        Addr addr = program->read32(registers[IP] + 2);
         if (registers[ACC] == registers[(Register)reg])
         {
             registers[IP] = addr;
@@ -195,7 +194,7 @@ bool Interpreter::step(Memory *program)
     case JMP_GT: // JMP_GT Rx <addr>
     {
         auto reg = program->read8(registers[IP] + 1);
-        auto addr = program->read32(registers[IP] + 2);
+        Addr addr = program->read32(registers[IP] + 2);
         if (registers[ACC] > registers[(Register)reg])
         {
             registers[IP] = addr;
@@ -210,7 +209,7 @@ bool Interpreter::step(Memory *program)
     case JMP_LT: // JMP_LT Rx <addr>
     {
         auto reg = program->read8(registers[IP] + 1);
-        auto addr = program->read32(registers[IP] + 2);
+        Addr addr = program->read32(registers[IP] + 2);
         if (registers[ACC] < registers[(Register)reg])
         {
             registers[IP] = addr;
@@ -224,7 +223,7 @@ bool Interpreter::step(Memory *program)
     }
     default:
     {
-        std::cout << "Unknown opcode: " << to_string((OpCode)op) << std::endl;
+        std::cout << fmt::colorize("Unknown opcode: " + to_string((OpCode)op), fmt::FG_RED, fmt::BOLD) << std::endl;
         running = false;
         registers[IP] += 1;
         modified_register = IP;
@@ -235,23 +234,27 @@ bool Interpreter::step(Memory *program)
     return running;
 }
 
-uint32_t Interpreter::run(Memory *program, uint32_t entry_point)
+uint32_t Interpreter::run(Memory *program, Addr entry_point)
 {
     registers[IP] = entry_point;
     running = true;
 
     registers.inspect(modified_register);
-    std::cout << fmt::colorize("Press enter to continue...", fmt::Colors::FG_GREEN);
+    std::cout << fmt::colorize("## BREAK (Press a key to start)", fmt::Colors::FG_YELLOW, fmt::Styles::BOLD);
     std::cin.get();
+
+    std::cout << colorize("## START OF PROGRAM", fmt::Colors::FG_RED, fmt::Styles::BOLD) << std::endl;
 
     while (step(program))
     {
         registers.inspect(modified_register);
-        std::cout << fmt::colorize("Press enter to continue...", fmt::Colors::FG_GREEN);
+        std::cout << fmt::colorize("## BREAK (Press a key to continue)", fmt::Colors::FG_YELLOW, fmt::Styles::BOLD);
         std::cin.get();
     }
+    auto ret = registers[R0];
 
-    std::cout << "Program finished." << std::endl;
+    std::cout << colorize("## END OF PROGRAM", fmt::Colors::FG_RED, fmt::Styles::BOLD) + " "
+              << colorize("R0 = " + hexstr32(ret), fmt::Colors::FG_WHITE, fmt::Styles::BOLD) << std::endl;
 
     return registers[R0];
 }

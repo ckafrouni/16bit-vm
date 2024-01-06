@@ -10,7 +10,8 @@
 enum OpCode
 {
     HALT = 0x00,
-    CALL,
+    CALL_LIT,
+    CALL_REG,
     RETURN,
 
     MOV_LIT_REG,
