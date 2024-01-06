@@ -36,14 +36,30 @@ int main()
 
     auto program = Memory(0x1000);
     auto main_addr = 0x00;
-    program.write8(main_addr, (uint8_t)OpCode::MOV_LIT_REG); // MOV_LIT_REG 0x05 R1
-    program.write32(main_addr + 1, 0x12121212);
-    program.write8(main_addr + 5, (uint8_t)Register::R1);
-    program.write8(main_addr + 6, (uint8_t)OpCode::RETURN); // RETURN
+    auto addr = main_addr;
 
+    // MOV_LIT_REG 0x05 R1
+    addr += program.write8(addr, (uint8_t)OpCode::MOV_LIT_REG);
+    addr += program.write32(addr, 0x12121212);
+    addr += program.write8(addr, (uint8_t)Register::R1);
+
+    // STORE_LIT_MEM 0xffffffff 0xdead
+    addr += program.write8(addr, (uint8_t)OpCode::STORE_LIT_MEM);
+    addr += program.write32(addr, 0xffffffff);
+    addr += program.write32(addr, 0x1234);
+
+    // RETURN
+    addr += program.write8(addr, (uint8_t)OpCode::RETURN); // RETURN
+
+    std::cout << "Program:" << std::endl;
     program.inspect();
+    std::cout << std::endl;
 
     // Run
     auto ret = interpreter.run(&program, main_addr);
     std::cout << "R0: " << hexstr16(ret) << std::endl;
+
+    // Inspect
+    interpreter.memory.inspect();
+    interpreter.registers.inspect();
 }

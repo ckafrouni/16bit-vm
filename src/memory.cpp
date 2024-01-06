@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 
 #include "memory.hpp"
@@ -8,6 +9,7 @@
 Memory::Memory(uint32_t size) : size(size)
 {
     this->memory = new uint8_t[size];
+    std::memset(this->memory, 0, size);
 }
 
 Memory::~Memory()
