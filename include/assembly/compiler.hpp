@@ -4,7 +4,10 @@
 #include <cstdint>
 #include <map>
 
+#include "instructions.hpp"
 #include "memory.hpp"
+
+using namespace instructions;
 
 namespace compiler
 {

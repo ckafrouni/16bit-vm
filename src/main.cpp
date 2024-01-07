@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
     auto rf = registers::RegisterFile();
     rf.set(registers::IP, 0x00);
-    rf.set(registers::SP, 0xbeef);
+    rf.set(registers::SP, 0xbeeb);
     rf.set(registers::FP, 0xbeef);
     rf.set(registers::ACC, 0x00);
 
