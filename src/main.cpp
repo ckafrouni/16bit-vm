@@ -13,7 +13,10 @@
 int main(int argc, char **argv)
 {
     if (argc < 2)
+    {
         std::cerr << utils::colorize("Usage: ", utils::FG_RED, utils::BOLD) << argv[0] << " <file>" << std::endl;
+        return 1;
+    }
 
     // Read file
     std::ifstream file(argv[1]);

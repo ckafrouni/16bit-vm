@@ -33,6 +33,7 @@ namespace instructions
         // Arithmetic
         ADD_LIT_REG,
         ADD_REG_REG,
+        ADD_REG_REG_REG,
 
         SUB_LIT_REG,
         SUB_REG_REG,
@@ -96,6 +97,8 @@ namespace instructions
             return "ADD_LIT_REG";
         case OpCode::ADD_REG_REG:
             return "ADD_REG_REG";
+        case OpCode::ADD_REG_REG_REG:
+            return "ADD_REG_REG_REG";
 
         case OpCode::SUB_LIT_REG:
             return "SUB_LIT_REG";

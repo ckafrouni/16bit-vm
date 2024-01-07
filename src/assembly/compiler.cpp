@@ -32,17 +32,15 @@ void compiler::Compiler::assemble(std::string source)
         if (line.empty())
             continue;
 
+        std::cout << std::endl;
         std::cout << utils::colorize("line: ", utils::FG_YELLOW, utils::BOLD) << line << std::endl;
         auto tokens = utils::split(line, ' ');
-        auto instruction = tokens[0];
-        std::cout << utils::colorize("compiling: ", utils::FG_YELLOW, utils::BOLD) << instruction << std::endl;
-        std::cout << utils::colorize("tokens: ", utils::FG_YELLOW, utils::BOLD) << tokens.size() << std::endl;
+        std::cout << utils::colorize("number of tokens: ", utils::FG_YELLOW, utils::BOLD) << tokens.size() << std::endl;
 
         for (auto token : tokens)
-        {
-            std::cout << utils::colorize("token: ", utils::FG_YELLOW, utils::BOLD) << token << std::endl;
-        }
-        std::cout << utils::colorize("this->current_addr: ", utils::FG_YELLOW, utils::BOLD) << this->current_addr << std::endl;
+            std::cout << utils::colorize("  token: ", utils::FG_YELLOW, utils::BOLD) << token << std::endl;
+
+        auto instruction = tokens[0];
 
         /** MOV instructions */
         if (instruction == "mov")
@@ -126,15 +124,18 @@ void compiler::Compiler::assemble(std::string source)
             }
             else
             {
-                std::cout << utils::colorize("Compiling ADD_REG_REG", utils::Colors::FG_GREEN) << std::endl;
-
+                std::cout << utils::colorize("Compiling ADD_REG_REG_REG", utils::Colors::FG_GREEN) << std::endl;
+                // add %<dst> %<src1> %<src2>
+                
                 auto reg1 = registers::to_register_enum(tokens[1].substr(1));
                 auto reg2 = registers::to_register_enum(tokens[2].substr(1));
+                auto reg3 = registers::to_register_enum(tokens[3].substr(1));
 
-                this->program->write8(this->current_addr, ADD_REG_REG);
+                this->program->write8(this->current_addr, ADD_REG_REG_REG);
                 this->program->write8(this->current_addr + 1, reg1);
                 this->program->write8(this->current_addr + 2, reg2);
-                this->current_addr += 3; // Opcode + Reg + Reg
+                this->program->write8(this->current_addr + 3, reg3);
+                this->current_addr += 4; // Opcode + Reg + Reg + Reg
             }
             // TODO
         }
@@ -180,80 +181,86 @@ void compiler::Compiler::assemble(std::string source)
         else if (instruction == "jne")
         {
             std::cout << utils::colorize("Compiling JMP_NE", utils::Colors::FG_GREEN) << std::endl;
-            // jne %<reg> <label>
+            // jne %<reg> %<reg> <label>
 
             this->program->write8(this->current_addr, JMP_NE);
             this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+            this->program->write8(this->current_addr + 2, registers::to_register_enum(tokens[2].substr(1)));
 
-            auto label = tokens[2];
-            unresolved_labels[label].push_back(this->current_addr + 2);
+            auto label = tokens[3];
+            unresolved_labels[label].push_back(this->current_addr + 3);
 
-            this->current_addr += 6; // Opcode + Reg + Addr
+            this->current_addr += 7; // Opcode + Reg + Reg + Addr
         }
         else if (instruction == "je")
         {
             std::cout << utils::colorize("Compiling JMP_EQ", utils::Colors::FG_GREEN) << std::endl;
-            // je %<reg> <label>
+            // je %<reg> %<reg> <label>
 
             this->program->write8(this->current_addr, JMP_EQ);
             this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+            this->program->write8(this->current_addr + 2, registers::to_register_enum(tokens[2].substr(1)));
 
-            auto label = tokens[2];
-            unresolved_labels[label].push_back(this->current_addr + 2);
+            auto label = tokens[3];
+            unresolved_labels[label].push_back(this->current_addr + 3);
 
-            this->current_addr += 6; // Opcode + Reg + Addr
+            this->current_addr += 7; // Opcode + Reg + Reg + Addr
         }
         else if (instruction == "jge")
         {
             std::cout << utils::colorize("Compiling JMP_GE", utils::Colors::FG_GREEN) << std::endl;
-            // jge %<reg> <label>
+            // jge %<reg> %<reg> <label>
 
             this->program->write8(this->current_addr, JMP_GE);
             this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+            this->program->write8(this->current_addr + 2, registers::to_register_enum(tokens[2].substr(1)));
 
-            auto label = tokens[2];
-            unresolved_labels[label].push_back(this->current_addr + 2);
+            auto label = tokens[3];
+            unresolved_labels[label].push_back(this->current_addr + 3);
 
-            this->current_addr += 6; // Opcode + Reg + Addr
+            this->current_addr += 7; // Opcode + Reg + Reg + Addr
         }
         else if (instruction == "jg")
         {
             std::cout << utils::colorize("Compiling JMP_G", utils::Colors::FG_GREEN) << std::endl;
-            // jg %<reg> <label>
+            // jg %<reg> %<reg> <label>
 
             this->program->write8(this->current_addr, JMP_GT);
             this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+            this->program->write8(this->current_addr + 2, registers::to_register_enum(tokens[2].substr(1)));
 
-            auto label = tokens[2];
-            unresolved_labels[label].push_back(this->current_addr + 2);
+            auto label = tokens[3];
+            unresolved_labels[label].push_back(this->current_addr + 3);
 
-            this->current_addr += 6; // Opcode + Reg + Addr
+            this->current_addr += 7; // Opcode + Reg + Reg + Addr
         }
         else if (instruction == "jl")
         {
             std::cout << utils::colorize("Compiling JMP_LT", utils::Colors::FG_GREEN) << std::endl;
-            // jl %<reg> <label>
+            // jl %<reg> %<reg> <label>
 
             this->program->write8(this->current_addr, JMP_LT);
             this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+            this->program->write8(this->current_addr + 2, registers::to_register_enum(tokens[2].substr(1)));
 
-            auto label = tokens[2];
-            unresolved_labels[label].push_back(this->current_addr + 2);
+            auto label = tokens[3];
+            unresolved_labels[label].push_back(this->current_addr + 3);
 
-            this->current_addr += 6; // Opcode + Reg + Addr
+            this->current_addr += 7; // Opcode + Reg + Reg + Addr
         }
         else if (instruction == "jle")
         {
             std::cout << utils::colorize("Compiling JMP_LE", utils::Colors::FG_GREEN) << std::endl;
-            // jle %<reg> <label>
+            // jle %<reg> %<reg> <label>
 
             this->program->write8(this->current_addr, JMP_LE);
             this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+            this->program->write8(this->current_addr + 2, registers::to_register_enum(tokens[2].substr(1)));
 
-            auto label = tokens[2];
-            unresolved_labels[label].push_back(this->current_addr + 2);
+            auto label = tokens[3];
+            unresolved_labels[label].push_back(this->current_addr + 3);
 
-            this->current_addr += 6; // Opcode + Reg + Addr
+            this->current_addr += 7; // Opcode + Reg + Reg + Addr
         }
 
         /** CALL instructions */
@@ -308,6 +315,7 @@ void compiler::Compiler::assemble(std::string source)
             std::cout << utils::colorize(f + ":" + l, utils::FG_RED, utils::BOLD) << std::endl;
             exit(1);
         }
+        std::cout << utils::colorize("current_addr: ", utils::FG_YELLOW, utils::BOLD) << utils::hexstr32(this->current_addr) << std::endl;
     }
 
     for (auto const &[label, addresses] : unresolved_labels)

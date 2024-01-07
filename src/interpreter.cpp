@@ -81,12 +81,15 @@ void Interpreter::execute(OpCode op)
         push(this->rf->get(reg));
         return;
     }
+        // TODO PUSH_MEM
+
     case POP_REG:
     {
         auto reg = readRegisterAtIP();
         writeToReg(reg, pop());
         return;
     }
+    // TODO POP_MEM
 
     /** registers::RegisterEnum **/
     case MOV_LIT_REG:
@@ -142,11 +145,14 @@ void Interpreter::execute(OpCode op)
         writeToReg(reg, this->rf->get(reg) + lit);
         return;
     }
-    case ADD_REG_REG:
+    case ADD_REG_REG_REG:
     {
-        auto src = readRegisterAtIP();
         auto dst = readRegisterAtIP();
-        writeToReg(dst, this->rf->get(dst) + this->rf->get(src));
+
+        auto srca = readRegisterAtIP();
+        auto srcb = readRegisterAtIP();
+
+        writeToReg(dst, this->rf->get(srca) + this->rf->get(srcb));
         return;
     }
     case SUB_LIT_REG:
@@ -195,19 +201,22 @@ void Interpreter::execute(OpCode op)
         writeToReg(registers::IP, addr);
         return;
     }
-    case JMP_NE: // JMP_NE Rx <addr>
+    case JMP_NE: // JMP_NE %<reg> %<reg> <addr>
     {
-        auto reg = readRegisterAtIP();
+        auto regx = readRegisterAtIP();
+        auto regy = readRegisterAtIP();
         Addr addr = readAddressAtIP();
-        if (this->rf->get(registers::ACC) != this->rf->get((registers::RegisterEnum)reg))
+        if (this->rf->get(regx) != this->rf->get(regy))
             writeToReg(registers::IP, addr);
+        // if (this->rf->get(registers::ACC) != this->rf->get(reg))
+        //     writeToReg(registers::IP, addr);
         return;
     }
     case JMP_EQ: // JMP_EQ Rx <addr>
     {
         auto reg = readRegisterAtIP();
         Addr addr = readAddressAtIP();
-        if (this->rf->get(registers::ACC) == this->rf->get((registers::RegisterEnum)reg))
+        if (this->rf->get(registers::ACC) == this->rf->get(reg))
             this->rf->set(registers::IP, addr);
         return;
     }
@@ -215,7 +224,7 @@ void Interpreter::execute(OpCode op)
     {
         auto reg = readRegisterAtIP();
         Addr addr = readAddressAtIP();
-        if (this->rf->get(registers::ACC) > this->rf->get((registers::RegisterEnum)reg))
+        if (this->rf->get(registers::ACC) > this->rf->get(reg))
             this->rf->set(registers::IP, addr);
         return;
     }
@@ -223,7 +232,7 @@ void Interpreter::execute(OpCode op)
     {
         auto reg = readRegisterAtIP();
         Addr addr = readAddressAtIP();
-        if (this->rf->get(registers::ACC) >= this->rf->get((registers::RegisterEnum)reg))
+        if (this->rf->get(registers::ACC) >= this->rf->get(reg))
             this->rf->set(registers::IP, addr);
         return;
     }
@@ -231,7 +240,7 @@ void Interpreter::execute(OpCode op)
     {
         auto reg = readRegisterAtIP();
         Addr addr = readAddressAtIP();
-        if (this->rf->get(registers::ACC) < this->rf->get((registers::RegisterEnum)reg))
+        if (this->rf->get(registers::ACC) < this->rf->get(reg))
             this->rf->set(registers::IP, addr);
         return;
     }
@@ -239,7 +248,7 @@ void Interpreter::execute(OpCode op)
     {
         auto reg = readRegisterAtIP();
         Addr addr = readAddressAtIP();
-        if (this->rf->get(registers::ACC) <= this->rf->get((registers::RegisterEnum)reg))
+        if (this->rf->get(registers::ACC) <= this->rf->get(reg))
             this->rf->set(registers::IP, addr);
         return;
     }

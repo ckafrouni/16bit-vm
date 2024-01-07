@@ -11,5 +11,5 @@ halt
 double:
 pop %r3
 pop %r4
-add %r3 %r4
+add %r1 %r3 %r4
 jmp end
