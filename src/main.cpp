@@ -9,7 +9,7 @@
 #include "instructions.hpp"
 #include "addr.hpp"
 
-#include "compiler/assm.hpp"
+#include "assembly/compiler.hpp"
 
 int main(int argc, char **argv)
 {
@@ -22,9 +22,9 @@ int main(int argc, char **argv)
                        std::istreambuf_iterator<char>());
 
     // Compile
-    auto comp = compiler::Compiler();
-    comp.compile(source);
-    auto program = comp.get_program();
+    auto cc = compiler::Compiler();
+    cc.assemble(source);
+    auto program = cc.get_program();
 
     std::cout << utils::colorize("## Compilation finished", utils::FG_RED, utils::BOLD) << std::endl;
     std::cout << utils::colorize("# Size of program: ", utils::FG_WHITE, utils::BOLD) << program->size << std::endl;

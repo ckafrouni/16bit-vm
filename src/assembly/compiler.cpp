@@ -6,7 +6,7 @@
 #include <sstream>
 #include <map>
 
-#include "compiler/assm.hpp"
+#include "assembly/compiler.hpp"
 
 #include "utils/fmt.hpp"
 #include "utils/hexutils.hpp"
@@ -17,9 +17,10 @@
 #include "registers.hpp"
 #include "memory.hpp"
 
-void compiler::Compiler::compile(std::string source)
+using namespace instructions;
+
+void compiler::Compiler::assemble(std::string source)
 {
-    using namespace instructions;
 
     auto label_addresses = std::map<std::string, Addr>();
     auto unresolved_labels = std::map<std::string, std::vector<Addr>>();
@@ -111,12 +112,6 @@ void compiler::Compiler::compile(std::string source)
             this->program->write8(this->current_addr + 1, reg);
             this->current_addr += 2; // Opcode + Reg
         }
-
-        /** STORE instructions */
-        // TODO
-
-        /** LOAD instructions */
-        // TODO
 
         /** ADD instructions */
         else if (instruction == "add")
