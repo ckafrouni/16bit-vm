@@ -10,41 +10,21 @@
 
 #include "utils/fmt.hpp"
 #include "utils/hexutils.hpp"
+#include "utils/strmanip.hpp"
 
 #include "instructions.hpp"
 #include "addr.hpp"
 #include "registers.hpp"
 #include "memory.hpp"
 
-std::vector<std::string> split(const std::string &s, char delimiter)
-{
-    std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream tokenStream(s);
-    while (std::getline(tokenStream, token, delimiter))
-    {
-        tokens.push_back(token);
-    }
-    return tokens;
-}
-
-// std::string stripWhitespace(const std::string &input)
-// {
-//     std::string output = input;
-//     output.erase(std::remove_if(output.begin(), output.end(), ::isspace), output.end());
-//     return output;
-// }
-
-memory::Memory *compile(std::string source)
+void compiler::Compiler::compile(std::string source)
 {
     using namespace instructions;
 
-    auto program = new std::vector<uint8_t>();
-    auto ip = 0x00;
     auto label_addresses = std::map<std::string, Addr>();
-    auto unresolved_labels = std::map<std::string, Addr>();
+    auto unresolved_labels = std::map<std::string, std::vector<Addr>>();
 
-    auto lines = split(source, '\n');
+    auto lines = utils::split(source, '\n');
     for (auto line : lines)
     {
         // Strip whitespace
@@ -52,7 +32,7 @@ memory::Memory *compile(std::string source)
             continue;
 
         std::cout << utils::colorize("line: ", utils::FG_YELLOW, utils::BOLD) << line << std::endl;
-        auto tokens = split(line, ' ');
+        auto tokens = utils::split(line, ' ');
         auto instruction = tokens[0];
         std::cout << utils::colorize("compiling: ", utils::FG_YELLOW, utils::BOLD) << instruction << std::endl;
         std::cout << utils::colorize("tokens: ", utils::FG_YELLOW, utils::BOLD) << tokens.size() << std::endl;
@@ -61,7 +41,7 @@ memory::Memory *compile(std::string source)
         {
             std::cout << utils::colorize("token: ", utils::FG_YELLOW, utils::BOLD) << token << std::endl;
         }
-        std::cout << utils::colorize("ip: ", utils::FG_YELLOW, utils::BOLD) << ip << std::endl;
+        std::cout << utils::colorize("this->current_addr: ", utils::FG_YELLOW, utils::BOLD) << this->current_addr << std::endl;
 
         /** MOV instructions */
         if (instruction == "mov")
@@ -74,13 +54,10 @@ memory::Memory *compile(std::string source)
                 auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
                 auto reg = registers::to_register_enum(tokens[2].substr(1));
 
-                program->push_back(MOV_LIT_REG);
-                program->push_back(value >> 24);
-                program->push_back(value >> 16);
-                program->push_back(value >> 8);
-                program->push_back(value);
-                program->push_back(reg);
-                ip += 6;
+                this->program->write8(this->current_addr, MOV_LIT_REG);
+                this->program->write32(this->current_addr + 1, value);
+                this->program->write8(this->current_addr + 5, reg);
+                this->current_addr += 6; // Opcode + Value + Reg
             }
             else
             {
@@ -89,10 +66,10 @@ memory::Memory *compile(std::string source)
                 auto reg1 = registers::to_register_enum(tokens[1]);
                 auto reg2 = registers::to_register_enum(tokens[2]);
 
-                program->push_back(MOV_REG_REG);
-                program->push_back(reg1);
-                program->push_back(reg2);
-                ip += 3;
+                this->program->write8(this->current_addr, MOV_REG_REG);
+                this->program->write8(this->current_addr + 1, reg1);
+                this->program->write8(this->current_addr + 2, reg2);
+                this->current_addr += 3; // Opcode + Reg + Reg
             }
             // TODO
         }
@@ -107,12 +84,9 @@ memory::Memory *compile(std::string source)
 
                 auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
 
-                program->push_back(PUSH_LIT);
-                program->push_back(value >> 24);
-                program->push_back(value >> 16);
-                program->push_back(value >> 8);
-                program->push_back(value);
-                ip += 5;
+                this->program->write8(this->current_addr, PUSH_LIT);
+                this->program->write32(this->current_addr + 1, value);
+                this->current_addr += 5; // Opcode + Value
             }
             else
             {
@@ -120,9 +94,9 @@ memory::Memory *compile(std::string source)
 
                 auto reg = registers::to_register_enum(tokens[1].substr(1));
 
-                program->push_back(PUSH_REG);
-                program->push_back(reg);
-                ip += 2;
+                this->program->write8(this->current_addr, PUSH_REG);
+                this->program->write8(this->current_addr + 1, reg);
+                this->current_addr += 2; // Opcode + Reg
             }
             // TODO
         }
@@ -133,9 +107,9 @@ memory::Memory *compile(std::string source)
             std::cout << utils::colorize("Compiling POP", utils::Colors::FG_GREEN) << std::endl;
             auto reg = registers::to_register_enum(tokens[1].substr(1));
 
-            program->push_back(POP_REG);
-            program->push_back(reg);
-            ip += 2;
+            this->program->write8(this->current_addr, POP_REG);
+            this->program->write8(this->current_addr + 1, reg);
+            this->current_addr += 2; // Opcode + Reg
         }
 
         /** STORE instructions */
@@ -155,13 +129,10 @@ memory::Memory *compile(std::string source)
                 auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
                 auto reg = registers::to_register_enum(tokens[2].substr(1));
 
-                program->push_back(ADD_LIT_REG);
-                program->push_back(value >> 24);
-                program->push_back(value >> 16);
-                program->push_back(value >> 8);
-                program->push_back(value);
-                program->push_back(reg);
-                ip += 6;
+                this->program->write8(this->current_addr, ADD_LIT_REG);
+                this->program->write32(this->current_addr + 1, value);
+                this->program->write8(this->current_addr + 5, reg);
+                this->current_addr += 6;
             }
             else
             {
@@ -170,10 +141,10 @@ memory::Memory *compile(std::string source)
                 auto reg1 = registers::to_register_enum(tokens[1].substr(1));
                 auto reg2 = registers::to_register_enum(tokens[2].substr(1));
 
-                program->push_back(ADD_REG_REG);
-                program->push_back(reg1);
-                program->push_back(reg2);
-                ip += 3;
+                this->program->write8(this->current_addr, ADD_REG_REG);
+                this->program->write8(this->current_addr + 1, reg1);
+                this->program->write8(this->current_addr + 2, reg2);
+                this->current_addr += 3; // Opcode + Reg + Reg
             }
             // TODO
         }
@@ -186,74 +157,143 @@ memory::Memory *compile(std::string source)
         {
             std::cout << utils::colorize("Compiling INC", utils::Colors::FG_GREEN) << std::endl;
             // inc r1
-            program->push_back(INC_REG);
-            program->push_back(registers::to_register_enum(tokens[1].substr(1)));
-            ip += 2;
+            this->program->write8(this->current_addr, INC_REG);
+            this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+            this->current_addr += 2; // Opcode + Reg
             // TODO
         }
 
         /** DEC instructions */
-        // TODO
+        else if (instruction == "dec")
+        {
+            std::cout << utils::colorize("Compiling DEC", utils::Colors::FG_GREEN) << std::endl;
+            // dec r1
+            this->program->write8(this->current_addr, DEC_REG);
+            this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+            this->current_addr += 2; // Opcode + Reg
+            // TODO
+        }
 
         /** JMP instructions */
+        else if (instruction == "jmp")
+        {
+            std::cout << utils::colorize("Compiling JMP", utils::Colors::FG_GREEN) << std::endl;
+            // jmp <label>
+
+            this->program->write8(this->current_addr, JMP);
+
+            auto label = tokens[1];
+            unresolved_labels[label].push_back(this->current_addr + 1);
+
+            this->current_addr += 5; // Opcode + Addr
+        }
         else if (instruction == "jne")
         {
             std::cout << utils::colorize("Compiling JMP_NE", utils::Colors::FG_GREEN) << std::endl;
-            // jmp_ne r1 loop (loop is a label -> 32bit address)
+            // jne %<reg> <label>
+
+            this->program->write8(this->current_addr, JMP_NE);
+            this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
 
             auto label = tokens[2];
-            auto label_address = label_addresses[label];
+            unresolved_labels[label].push_back(this->current_addr + 2);
 
-            program->push_back(JMP_NE);
-            program->push_back(registers::to_register_enum(tokens[1].substr(1)));
-            program->push_back(label_address >> 24);
-            program->push_back(label_address >> 16);
-            program->push_back(label_address >> 8);
-            program->push_back(label_address);
+            this->current_addr += 6; // Opcode + Reg + Addr
+        }
+        else if (instruction == "je")
+        {
+            std::cout << utils::colorize("Compiling JMP_EQ", utils::Colors::FG_GREEN) << std::endl;
+            // je %<reg> <label>
 
-            ip += 6;
-            // TODO
+            this->program->write8(this->current_addr, JMP_EQ);
+            this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+
+            auto label = tokens[2];
+            unresolved_labels[label].push_back(this->current_addr + 2);
+
+            this->current_addr += 6; // Opcode + Reg + Addr
+        }
+        else if (instruction == "jge")
+        {
+            std::cout << utils::colorize("Compiling JMP_GE", utils::Colors::FG_GREEN) << std::endl;
+            // jge %<reg> <label>
+
+            this->program->write8(this->current_addr, JMP_GE);
+            this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+
+            auto label = tokens[2];
+            unresolved_labels[label].push_back(this->current_addr + 2);
+
+            this->current_addr += 6; // Opcode + Reg + Addr
+        }
+        else if (instruction == "jg")
+        {
+            std::cout << utils::colorize("Compiling JMP_G", utils::Colors::FG_GREEN) << std::endl;
+            // jg %<reg> <label>
+
+            this->program->write8(this->current_addr, JMP_GT);
+            this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+
+            auto label = tokens[2];
+            unresolved_labels[label].push_back(this->current_addr + 2);
+
+            this->current_addr += 6; // Opcode + Reg + Addr
+        }
+        else if (instruction == "jl")
+        {
+            std::cout << utils::colorize("Compiling JMP_LT", utils::Colors::FG_GREEN) << std::endl;
+            // jl %<reg> <label>
+
+            this->program->write8(this->current_addr, JMP_LT);
+            this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+
+            auto label = tokens[2];
+            unresolved_labels[label].push_back(this->current_addr + 2);
+
+            this->current_addr += 6; // Opcode + Reg + Addr
+        }
+        else if (instruction == "jle")
+        {
+            std::cout << utils::colorize("Compiling JMP_LE", utils::Colors::FG_GREEN) << std::endl;
+            // jle %<reg> <label>
+
+            this->program->write8(this->current_addr, JMP_LE);
+            this->program->write8(this->current_addr + 1, registers::to_register_enum(tokens[1].substr(1)));
+
+            auto label = tokens[2];
+            unresolved_labels[label].push_back(this->current_addr + 2);
+
+            this->current_addr += 6; // Opcode + Reg + Addr
         }
 
         /** CALL instructions */
         else if (instruction == "call")
         {
             std::cout << utils::colorize("Compiling CALL", utils::Colors::FG_GREEN) << std::endl;
-            // call func (func is a label -> 32bit address)
+            // call <func>
+
+            this->program->write8(this->current_addr, CALL);
 
             auto label = tokens[1];
-            auto label_address = label_addresses[label];
-            if (label_addresses.find(label) == label_addresses.end())
-            {
-                std::cout << utils::colorize("Unresolved label: ", utils::FG_RED, utils::BOLD) << label << std::endl;
-                unresolved_labels[label] = ip;
-            }
-            std::cout << utils::colorize("label_address: ", utils::FG_YELLOW, utils::BOLD) << utils::hexstr32(label_address) << std::endl;
+            unresolved_labels[label].push_back(this->current_addr + 1);
 
-            program->push_back(CALL);
-            program->push_back(label_address >> 24);
-            program->push_back(label_address >> 16);
-            program->push_back(label_address >> 8);
-            program->push_back(label_address);
-
-            ip += 5;
-            // TODO
+            this->current_addr += 5; // Opcode + Addr
         }
 
         /** RETURN instructions */
         else if (instruction == "ret")
         {
             std::cout << utils::colorize("Compiling RETURN", utils::Colors::FG_GREEN) << std::endl;
-            program->push_back(RETURN);
-            ip += 1;
+            this->program->write8(this->current_addr, RETURN);
+            this->current_addr += 1;
         }
 
         /** HALT instructions */
         else if (instruction == "halt")
         {
             std::cout << utils::colorize("Compiling HALT", utils::Colors::FG_GREEN) << std::endl;
-            program->push_back(HALT);
-            ip += 1;
+            this->program->write8(this->current_addr, HALT);
+            this->current_addr += 1;
         }
 
         /** LABEL instructions ("label_string:") */
@@ -261,7 +301,10 @@ memory::Memory *compile(std::string source)
         {
             std::cout << utils::colorize("Compiling LABEL", utils::Colors::FG_GREEN) << std::endl;
             auto label = instruction.substr(0, instruction.length() - 1);
-            label_addresses[label] = ip;
+            std::cout << utils::colorize("label: ", utils::FG_YELLOW, utils::BOLD) << label << std::endl;
+
+            // Add label to map
+            label_addresses[label] = this->current_addr;
         }
 
         else
@@ -275,26 +318,13 @@ memory::Memory *compile(std::string source)
             std::cout << utils::colorize(f + ":" + l, utils::FG_RED, utils::BOLD) << std::endl;
             exit(1);
         }
-
-        // for (auto byte : *program)
-        //      std::cout << utils::colorize("byte: ", utils::FG_YELLOW, utils::BOLD) << utils::hexstr16(byte) << std::endl;
     }
 
-    // Resolve labels
-    for (auto const &[label, address] : unresolved_labels)
+    for (auto const &[label, addresses] : unresolved_labels)
     {
-        std::cout << utils::colorize("Resolving label: ", utils::FG_YELLOW, utils::BOLD) << label << std::endl;
-        std::cout << utils::colorize("Address: ", utils::FG_YELLOW, utils::BOLD) << utils::hexstr32(address) << std::endl;
-        auto label_address = label_addresses[label];
-        std::cout << utils::colorize("Label address: ", utils::FG_YELLOW, utils::BOLD) << utils::hexstr32(label_address) << std::endl;
-        program->at(address + 1) = label_address >> 24;
-        program->at(address + 2) = label_address >> 16;
-        program->at(address + 3) = label_address >> 8;
-        program->at(address + 4) = label_address;
+        for (auto address : addresses)
+        {
+            this->program->write32(address, label_addresses[label]);
+        }
     }
-
-    auto memory = new memory::Memory(program->size());
-    memory->write(0x00, program->data(), program->size());
-
-    return memory;
 }

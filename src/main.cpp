@@ -22,7 +22,9 @@ int main(int argc, char **argv)
                        std::istreambuf_iterator<char>());
 
     // Compile
-    auto program = compile(source);
+    auto comp = compiler::Compiler();
+    comp.compile(source);
+    auto program = comp.get_program();
 
     std::cout << utils::colorize("## Compilation finished", utils::FG_RED, utils::BOLD) << std::endl;
     std::cout << utils::colorize("# Size of program: ", utils::FG_WHITE, utils::BOLD) << program->size << std::endl;
@@ -63,7 +65,7 @@ int main(int argc, char **argv)
     // Run
     if (interpreter.load(program))
     {
-        auto ret = interpreter.run(0x00, vm::DEBUG);
+        auto ret = interpreter.run(0x00, vm::RELEASE);
         (void)ret;
     }
     else
