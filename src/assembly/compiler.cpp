@@ -48,6 +48,7 @@ void compiler::Compiler::assemble(std::string source)
         if (instruction == "mov")
         {
             std::cout << utils::colorize("Compiling MOV", utils::Colors::FG_GREEN) << std::endl;
+
             if (tokens[1][0] == '$')
             {
                 std::cout << utils::colorize("Compiling MOV_LIT_REG", utils::Colors::FG_GREEN) << std::endl;
@@ -55,10 +56,7 @@ void compiler::Compiler::assemble(std::string source)
                 auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
                 auto reg = registers::to_register_enum(tokens[2].substr(1));
 
-                this->program->write8(this->current_addr, MOV_LIT_REG);
-                this->program->write32(this->current_addr + 1, value);
-                this->program->write8(this->current_addr + 5, reg);
-                this->current_addr += 6; // Opcode + Value + Reg
+                this->current_addr += encode_mov_lit_reg(this->current_addr, value, reg);
             }
             else
             {
@@ -67,10 +65,7 @@ void compiler::Compiler::assemble(std::string source)
                 auto reg1 = registers::to_register_enum(tokens[1]);
                 auto reg2 = registers::to_register_enum(tokens[2]);
 
-                this->program->write8(this->current_addr, MOV_REG_REG);
-                this->program->write8(this->current_addr + 1, reg1);
-                this->program->write8(this->current_addr + 2, reg2);
-                this->current_addr += 3; // Opcode + Reg + Reg
+                this->current_addr += encode_mov_reg_reg(this->current_addr, reg1, reg2);
             }
             // TODO
         }
