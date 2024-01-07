@@ -14,7 +14,7 @@ EXECUTABLE="vm"
 build_dir="build"
 
 if [ "$mode" == "build" ]; then
-    echo -e "\033[0;31mBuild the project...\033[0m"7
+    echo -e "\033[0;31mbuild.sh: Build the project...\033[0m"
 
     mkdir -p $build_dir
     cd $build_dir
@@ -25,7 +25,7 @@ if [ "$mode" == "build" ]; then
 fi
 
 if [ "$1" == "clean" ]; then
-    echo -e "\033[0;31mClean the build directory...\033[0m"
+    echo -e "\033[0;31mbuild.sh: Clean the build directory...\033[0m"
     rm -rf $build_dir
     exit 0
 fi
@@ -35,11 +35,11 @@ if [ "$1" == "run" ]; then
 
     ./build.sh build
 
-    echo -e "\033[0;31mRun the project...\033[0m"
-    echo -e "\033[0;31mArguments: $@\033[0m"
+    echo -e "\033[0;31mbuild.sh: Run the project...\033[0m"
+    echo -e "\033[0;31mbuild.sh: Arguments: ( $@ )\033[0m"
 
     ./$build_dir/$EXECUTABLE "$@"
     exit 0
 fi
 
-echo -e "\033[0;31mInvalid mode: $mode\033[0m"
+echo -e "\033[0;31mbuild.sh: Invalid mode: $mode\033[0m"

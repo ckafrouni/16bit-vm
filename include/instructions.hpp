@@ -6,28 +6,29 @@
 
 #include "registers.hpp"
 
-namespace Instructions
+namespace instructions
 {
 
     enum OpCode
     {
         HALT = 0x00,
-        CALL_LIT,
-        RETURN,
 
+        // Stack
         PUSH_LIT,
         PUSH_REG,
         POP_REG,
 
+        // Register
         MOV_LIT_REG,
         MOV_REG_REG,
+        MOV_MEM_REG,
 
-        STORE_LIT_MEM,
-        STORE_REG_MEM,
-        STORE_MEM_MEM,
+        // Memory
+        MOV_LIT_MEM,
+        MOV_REG_MEM,
+        MOV_MEM_MEM,
 
-        LOAD_MEM_REG,
-
+        // Arithmetic
         ADD_LIT_REG,
         ADD_REG_REG,
 
@@ -40,6 +41,7 @@ namespace Instructions
         DEC_REG,
         DEC_MEM,
 
+        // Jump
         JMP_NE,
         JMP_EQ,
         JMP_GT,
@@ -47,6 +49,11 @@ namespace Instructions
         JMP_GE,
         JMP_LE,
         JMP,
+
+        // Subroutine
+        CALL,
+        RETURN,
+
     };
 
     inline std::string to_string(OpCode op)
@@ -58,8 +65,8 @@ namespace Instructions
 
         case OpCode::RETURN:
             return "RETURN";
-        case OpCode::CALL_LIT:
-            return "CALL_LIT";
+        case OpCode::CALL:
+            return "CALL";
 
         case OpCode::PUSH_LIT:
             return "PUSH_LIT";
@@ -73,15 +80,15 @@ namespace Instructions
         case OpCode::MOV_REG_REG:
             return "MOV_REG_REG";
 
-        case OpCode::STORE_LIT_MEM:
-            return "STORE_LIT_MEM";
-        case OpCode::STORE_REG_MEM:
-            return "STORE_REG_MEM";
-        case OpCode::STORE_MEM_MEM:
-            return "STORE_MEM_MEM";
+        case OpCode::MOV_LIT_MEM:
+            return "MOV_LIT_MEM";
+        case OpCode::MOV_REG_MEM:
+            return "MOV_REG_MEM";
+        case OpCode::MOV_MEM_MEM:
+            return "MOV_MEM_MEM";
 
-        case OpCode::LOAD_MEM_REG:
-            return "LOAD_MEM_REG";
+        case OpCode::MOV_MEM_REG:
+            return "MOV_MEM_REG";
 
         case OpCode::ADD_LIT_REG:
             return "ADD_LIT_REG";

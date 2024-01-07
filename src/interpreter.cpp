@@ -12,329 +12,298 @@
 #include "registers.hpp"
 #include "addr.hpp"
 
-void push(Memory *memory, RegisterFile *registers, uint32_t val)
+using namespace instructions;
+using namespace vm;
+
+void Interpreter::push(uint32_t val)
 {
-    (*registers)[SP] -= 4;
-    memory->write32((*registers)[SP], val);
-    (*registers)[IP] += 5;
+    this->rf->dec(registers::SP, 4);
+    this->mem->write32(this->rf->get(registers::SP), val);
 }
 
-uint32_t pop(Memory *memory, RegisterFile *registers)
+uint32_t Interpreter::pop()
 {
-    auto val = memory->read32((*registers)[(Register)SP]);
-    (*registers)[(Register)SP] += 4;
+    auto val = this->mem->read32(this->rf->get(registers::SP));
+    this->rf->inc(registers::SP, 4);
     return val;
 }
 
-bool Interpreter::step(Memory *program)
+Addr Interpreter::readAddressAtIP()
 {
-    using namespace Instructions;
+    auto addr = this->program->read32(this->rf->get(registers::IP));
+    this->rf->inc(registers::IP, 4);
+    return addr;
+}
 
-    auto op = program->read8(registers[IP]);
-    std::cout << utils::colorize("## Executing: " + to_string((OpCode)op), utils::FG_RED, utils::BOLD) << std::endl;
+registers::RegisterEnum Interpreter::readRegisterAtIP()
+{
+    auto reg = (registers::RegisterEnum)this->program->read8(this->rf->get(registers::IP));
+    this->rf->inc(registers::IP, 1);
+    return reg;
+}
 
+uint32_t Interpreter::readLiteralAtIP()
+{
+    auto lit = this->program->read32(this->rf->get(registers::IP));
+    this->rf->inc(registers::IP, 4);
+    return lit;
+}
+
+void Interpreter::writeToReg(registers::RegisterEnum reg, uint32_t val)
+{
+    this->rf->set(reg, val);
+}
+
+void Interpreter::writeToMem(Addr address, uint32_t val)
+{
+    this->mem->write32(address, val);
+}
+
+void Interpreter::execute(OpCode op)
+{
     switch (op)
     {
     case HALT:
     {
         running = false;
-        registers[IP] += 1;
-        modified_register = IP;
-        break;
+        return;
+    }
+
+    /** Stack **/
+    case PUSH_LIT:
+    {
+        auto lit = readLiteralAtIP();
+        push(lit);
+        return;
+    }
+    case PUSH_REG:
+    {
+        auto reg = readRegisterAtIP();
+        push(this->rf->get(reg));
+        return;
+    }
+    case POP_REG:
+    {
+        auto reg = readRegisterAtIP();
+        writeToReg(reg, pop());
+        return;
+    }
+
+    /** registers::RegisterEnum **/
+    case MOV_LIT_REG:
+    {
+        auto lit = readLiteralAtIP();
+        auto reg = readRegisterAtIP();
+        writeToReg(reg, lit);
+        return;
+    }
+    case MOV_REG_REG:
+    {
+        auto src = readRegisterAtIP();
+        auto dst = readRegisterAtIP();
+        writeToReg(dst, this->rf->get(src));
+        return;
+    }
+    case MOV_MEM_REG:
+    {
+        Addr addr = readAddressAtIP();
+        auto reg = readRegisterAtIP();
+        writeToReg(reg, this->mem->read32(addr));
+        return;
+    }
+
+    /** memory::Memory **/
+    case MOV_LIT_MEM:
+    {
+        auto lit = readLiteralAtIP();
+        Addr addr = readAddressAtIP();
+        writeToMem(addr, lit);
+        return;
+    }
+    case MOV_REG_MEM:
+    {
+        auto reg = readRegisterAtIP();
+        Addr addr = readAddressAtIP();
+        writeToMem(addr, this->rf->get(reg));
+        return;
+    }
+    case MOV_MEM_MEM:
+    {
+        auto src = readAddressAtIP();
+        auto dst = readAddressAtIP();
+        writeToMem(dst, this->mem->read32(src));
+        return;
+    }
+
+    /** Arithmetic **/
+    case ADD_LIT_REG:
+    {
+        auto lit = readLiteralAtIP();
+        auto reg = readRegisterAtIP();
+        writeToReg(reg, this->rf->get(reg) + lit);
+        return;
+    }
+    case ADD_REG_REG:
+    {
+        auto src = readRegisterAtIP();
+        auto dst = readRegisterAtIP();
+        writeToReg(dst, this->rf->get(dst) + this->rf->get(src));
+        return;
+    }
+    case SUB_LIT_REG:
+    {
+        auto lit = readLiteralAtIP();
+        auto reg = readRegisterAtIP();
+        writeToReg(reg, this->rf->get(reg) - lit);
+        return;
+    }
+    case SUB_REG_REG:
+    {
+        auto src = readRegisterAtIP();
+        auto dst = readRegisterAtIP();
+        writeToReg(dst, this->rf->get(dst) - this->rf->get(src));
+        return;
+    }
+    case INC_REG:
+    {
+        auto reg = readRegisterAtIP();
+        writeToReg(reg, this->rf->get(reg) + 1);
+        return;
+    }
+    case INC_MEM:
+    {
+        Addr addr = readAddressAtIP();
+        writeToMem(addr, this->mem->read32(addr) + 1);
+        return;
+    }
+    case DEC_REG:
+    {
+        auto reg = readRegisterAtIP();
+        writeToReg(reg, this->rf->get(reg) - 1);
+        return;
+    }
+    case DEC_MEM:
+    {
+        Addr addr = readAddressAtIP();
+        writeToMem(addr, this->mem->read32(addr) - 1);
+        return;
+    }
+
+    /** Jumps **/
+    case JMP:
+    {
+        Addr addr = readAddressAtIP();
+        writeToReg(registers::IP, addr);
+        return;
+    }
+    case JMP_NE: // JMP_NE Rx <addr>
+    {
+        auto reg = readRegisterAtIP();
+        Addr addr = readAddressAtIP();
+        if (this->rf->get(registers::ACC) != this->rf->get((registers::RegisterEnum)reg))
+            writeToReg(registers::IP, addr);
+        return;
+    }
+    case JMP_EQ: // JMP_EQ Rx <addr>
+    {
+        auto reg = readRegisterAtIP();
+        Addr addr = readAddressAtIP();
+        if (this->rf->get(registers::ACC) == this->rf->get((registers::RegisterEnum)reg))
+            this->rf->set(registers::IP, addr);
+        return;
+    }
+    case JMP_GT: // JMP_GT Rx <addr>
+    {
+        auto reg = readRegisterAtIP();
+        Addr addr = readAddressAtIP();
+        if (this->rf->get(registers::ACC) > this->rf->get((registers::RegisterEnum)reg))
+            this->rf->set(registers::IP, addr);
+        return;
+    }
+    case JMP_GE: // JMP_GTE Rx <addr>
+    {
+        auto reg = readRegisterAtIP();
+        Addr addr = readAddressAtIP();
+        if (this->rf->get(registers::ACC) >= this->rf->get((registers::RegisterEnum)reg))
+            this->rf->set(registers::IP, addr);
+        return;
+    }
+    case JMP_LT: // JMP_LT Rx <addr>
+    {
+        auto reg = readRegisterAtIP();
+        Addr addr = readAddressAtIP();
+        if (this->rf->get(registers::ACC) < this->rf->get((registers::RegisterEnum)reg))
+            this->rf->set(registers::IP, addr);
+        return;
+    }
+    case JMP_LE: // JMP_LTE Rx <addr>
+    {
+        auto reg = readRegisterAtIP();
+        Addr addr = readAddressAtIP();
+        if (this->rf->get(registers::ACC) <= this->rf->get((registers::RegisterEnum)reg))
+            this->rf->set(registers::IP, addr);
+        return;
+    }
+
+    /** Subroutines **/
+    case CALL:
+    {
+        // TODO after implementing the stack
+        return;
     }
     case RETURN:
     {
         // TODO after implementing the stack and CALL
-        break;
-    }
-    case PUSH_LIT:
-    {
-        auto lit = program->read32(registers[IP] + 1);
-        push(&memory, &registers, lit);
-        modified_register = SP;
-        break;
-    }
-    case PUSH_REG:
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        push(&memory, &registers, registers[(Register)reg]);
-        modified_register = SP;
-        break;
-    }
-    case POP_REG:
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        registers[(Register)reg] = pop(&memory, &registers);
-        modified_register = (Register)reg;
-        break;
-    }
-    case MOV_LIT_REG:
-    {
-        auto lit = program->read32(registers[IP] + 1);
-        auto reg = program->read8(registers[IP] + 5);
-        modified_register = (Register)reg;
-        registers[modified_register] = lit;
-        registers[IP] += 6;
-        break;
-    }
-    case MOV_REG_REG:
-    {
-        auto src = program->read8(registers[IP] + 1);
-        auto dst = program->read8(registers[IP] + 2);
-        modified_register = (Register)dst;
-        registers[modified_register] = registers[(Register)src];
-        registers[IP] += 3;
-        break;
-    }
-    case STORE_LIT_MEM:
-    {
-        auto lit = program->read32(registers[IP] + 1);
-        Addr addr = program->read32(registers[IP] + 5);
-        memory.write32(addr, lit);
-        registers[IP] += 9;
-        modified_register = IP;
-        break;
-    }
-    case STORE_REG_MEM:
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        Addr addr = program->read32(registers[IP] + 2);
-        memory.write32(addr, registers[(Register)reg]);
-        registers[IP] += 6;
-        modified_register = IP;
-        break;
-    }
-    case STORE_MEM_MEM:
-    {
-        auto src_addr = program->read32(registers[IP] + 1);
-        auto dst_addr = program->read32(registers[IP] + 5);
-        auto val = memory.read32(src_addr);
-        memory.write32(dst_addr, val);
-        registers[IP] += 9;
-        modified_register = IP;
-        break;
-    }
-    case LOAD_MEM_REG:
-    {
-        Addr addr = program->read32(registers[IP] + 1);
-        auto reg = program->read8(registers[IP] + 5);
-        modified_register = (Register)reg;
-        registers[modified_register] = memory.read32(addr);
-        registers[IP] += 6;
-        break;
-    }
-    case ADD_LIT_REG:
-    {
-        auto lit = program->read32(registers[IP] + 1);
-        auto reg = program->read8(registers[IP] + 5);
-        modified_register = (Register)reg;
-        registers[modified_register] += lit;
-        registers[IP] += 6;
-        break;
-    }
-    case ADD_REG_REG:
-    {
-        auto src = program->read8(registers[IP] + 1);
-        auto dst = program->read8(registers[IP] + 2);
-        modified_register = (Register)dst;
-        registers[modified_register] += registers[(Register)src];
-        registers[IP] += 3;
-        break;
-    }
-    case SUB_LIT_REG:
-    {
-        auto lit = program->read32(registers[IP] + 1);
-        auto reg = program->read8(registers[IP] + 5);
-        modified_register = (Register)reg;
-        registers[modified_register] -= lit;
-        registers[IP] += 6;
-        break;
-    }
-    case SUB_REG_REG:
-    {
-        auto src = program->read8(registers[IP] + 1);
-        auto dst = program->read8(registers[IP] + 2);
-        modified_register = (Register)dst;
-        registers[modified_register] -= registers[(Register)src];
-        registers[IP] += 3;
-        break;
-    }
-    case INC_REG:
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        modified_register = (Register)reg;
-        registers[modified_register] += 1;
-        registers[IP] += 2;
-        break;
-    }
-    case INC_MEM:
-    {
-        Addr addr = program->read32(registers[IP] + 1);
-        auto val = memory.read32(addr);
-        memory.write32(addr, val + 1);
-        registers[IP] += 5;
-        modified_register = IP;
-        break;
-    }
-    case DEC_REG:
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        modified_register = (Register)reg;
-        registers[modified_register] -= 1;
-        registers[IP] += 2;
-        break;
-    }
-    case DEC_MEM:
-    {
-        Addr addr = program->read32(registers[IP] + 1);
-        auto val = memory.read32(addr);
-        memory.write32(addr, val - 1);
-        registers[IP] += 5;
-        modified_register = IP;
-        break;
-    }
-    case JMP:
-    {
-        Addr addr = program->read32(registers[IP] + 1);
-        registers[IP] = addr;
-        modified_register = IP;
-        break;
-    }
-    case JMP_NE: // JMP_NE Rx <addr>
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        Addr addr = program->read32(registers[IP] + 2);
-        if (registers[ACC] != registers[(Register)reg])
-        {
-            registers[IP] = addr;
-        }
-        else
-        {
-            registers[IP] += 6;
-        }
-        modified_register = IP;
-        break;
-    }
-    case JMP_EQ: // JMP_EQ Rx <addr>
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        Addr addr = program->read32(registers[IP] + 2);
-        if (registers[ACC] == registers[(Register)reg])
-        {
-            registers[IP] = addr;
-        }
-        else
-        {
-            registers[IP] += 6;
-        }
-        modified_register = IP;
-        break;
-    }
-    case JMP_GT: // JMP_GT Rx <addr>
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        Addr addr = program->read32(registers[IP] + 2);
-        if (registers[ACC] > registers[(Register)reg])
-        {
-            registers[IP] = addr;
-        }
-        else
-        {
-            registers[IP] += 6;
-        }
-        modified_register = IP;
-        break;
-    }
-    case JMP_LT: // JMP_LT Rx <addr>
-    {
-        auto reg = program->read8(registers[IP] + 1);
-        Addr addr = program->read32(registers[IP] + 2);
-        if (registers[ACC] < registers[(Register)reg])
-        {
-            registers[IP] = addr;
-        }
-        else
-        {
-            registers[IP] += 6;
-        }
-        modified_register = IP;
-        break;
-    }
-
-    case CALL_LIT:
-    {
-        Addr addr = program->read32(registers[IP] + 1);
-        push(&memory, &registers, registers[IP] + 5); // return address
-        // push registers
-        push(&memory, &registers, registers[R0]);
-        push(&memory, &registers, registers[R1]);
-        push(&memory, &registers, registers[R2]);
-        push(&memory, &registers, registers[R3]);
-        push(&memory, &registers, registers[ACC]);
-
-        registers[FP] = registers[SP];
-        registers[IP] = addr;
-        modified_register = IP;
-        break;
-    }
-    default:
-    {
-        std::cout << utils::colorize("Unknown opcode: " + to_string((OpCode)op), utils::FG_RED, utils::BOLD) << std::endl;
-        running = false;
-        registers[IP] += 1;
-        modified_register = IP;
-        break;
+        return;
     }
     }
 
-    return running;
+    throw std::runtime_error(utils::colorize("Unknown opcode: <" + std::to_string(op) + ">", utils::FG_RED, utils::BOLD));
 }
 
-uint32_t Interpreter::run(Memory *program, Addr entry_point)
+uint32_t Interpreter::run(Addr entry_point, Mode mode)
 {
-    registers[IP] = entry_point;
-    running = true;
-
     std::cout << colorize("## START OF PROGRAM", utils::Colors::FG_RED, utils::Styles::BOLD) << std::endl;
+    std::cout << colorize("## Entry point: " + utils::hexstr32(entry_point), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
+    std::cout << colorize("## Mode: " + std::string(mode == Mode::DEBUG ? "DEBUG" : "RELEASE"), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
 
-    while (step(program))
-    {
-        registers.inspect(modified_register);
-    }
-    auto ret = registers[R0];
+    this->rf->set(registers::IP, entry_point);
+    this->running = true;
 
-    std::cout << colorize("## END OF PROGRAM", utils::Colors::FG_RED, utils::Styles::BOLD) + " "
-              << colorize("R0 = " + utils::hexstr32(ret), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
-
-    return registers[R0];
-}
-
-uint32_t Interpreter::run(Memory *program, Addr entry_point, Mode mode)
-{
     if (mode != Mode::DEBUG)
     {
-        return run(program, entry_point);
+        while (running)
+        {
+            auto op = fetch();
+            execute(op);
+        }
     }
     else
     {
-        registers[IP] = entry_point;
-        running = true;
-
-        registers.inspect(modified_register);
+        registers::inspect(this->rf);
         std::cout << utils::colorize("## BREAK (Press a key to start)", utils::Colors::FG_YELLOW, utils::Styles::BOLD);
         std::cin.get();
 
-        while (step(program))
+        while (running)
         {
-            registers.inspect(modified_register);
+            this->rf->reset_modified();
+
+            auto op = fetch();
+
+            std::cout << std::endl;
+            std::cout << utils::colorize("## Next instruction: " + instructions::to_string(op), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
             std::cout << utils::colorize("## BREAK (Press a key to continue)", utils::Colors::FG_YELLOW, utils::Styles::BOLD);
             std::cin.get();
+
+            execute(op);
+            registers::inspect(this->rf);
         }
-        auto ret = registers[R0];
-
-        std::cout << colorize("## END OF PROGRAM", utils::Colors::FG_RED, utils::Styles::BOLD) + " "
-                  << colorize("R0 = " + utils::hexstr32(ret), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
-
-        return registers[R0];
     }
+
+    auto ret = this->rf->get(registers::ACC);
+
+    std::cout << colorize("## END OF PROGRAM", utils::Colors::FG_RED, utils::Styles::BOLD) + " "
+              << colorize("registers::ACC = " + utils::hexstr32(ret), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
+
+    return ret;
 }

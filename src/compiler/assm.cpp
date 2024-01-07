@@ -35,9 +35,9 @@ std::vector<std::string> split(const std::string &s, char delimiter)
 //     return output;
 // }
 
-Memory *compile(std::string source)
+memory::Memory *compile(std::string source)
 {
-    using namespace Instructions;
+    using namespace instructions;
 
     auto program = new std::vector<uint8_t>();
     auto ip = 0x00;
@@ -72,7 +72,7 @@ Memory *compile(std::string source)
                 std::cout << utils::colorize("Compiling MOV_LIT_REG", utils::Colors::FG_GREEN) << std::endl;
 
                 auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
-                auto reg = to_register(tokens[2].substr(1));
+                auto reg = registers::to_register_enum(tokens[2].substr(1));
 
                 program->push_back(MOV_LIT_REG);
                 program->push_back(value >> 24);
@@ -86,8 +86,8 @@ Memory *compile(std::string source)
             {
                 std::cout << utils::colorize("Compiling MOV_REG_REG", utils::Colors::FG_GREEN) << std::endl;
 
-                auto reg1 = to_register(tokens[1]);
-                auto reg2 = to_register(tokens[2]);
+                auto reg1 = registers::to_register_enum(tokens[1]);
+                auto reg2 = registers::to_register_enum(tokens[2]);
 
                 program->push_back(MOV_REG_REG);
                 program->push_back(reg1);
@@ -118,7 +118,7 @@ Memory *compile(std::string source)
             {
                 std::cout << utils::colorize("Compiling PUSH_REG", utils::Colors::FG_GREEN) << std::endl;
 
-                auto reg = to_register(tokens[1].substr(1));
+                auto reg = registers::to_register_enum(tokens[1].substr(1));
 
                 program->push_back(PUSH_REG);
                 program->push_back(reg);
@@ -131,7 +131,7 @@ Memory *compile(std::string source)
         else if (instruction == "pop")
         {
             std::cout << utils::colorize("Compiling POP", utils::Colors::FG_GREEN) << std::endl;
-            auto reg = to_register(tokens[1].substr(1));
+            auto reg = registers::to_register_enum(tokens[1].substr(1));
 
             program->push_back(POP_REG);
             program->push_back(reg);
@@ -153,7 +153,7 @@ Memory *compile(std::string source)
                 std::cout << utils::colorize("Compiling ADD_LIT_REG", utils::Colors::FG_GREEN) << std::endl;
 
                 auto value = std::stoi(tokens[1].substr(1), nullptr, 0);
-                auto reg = to_register(tokens[2].substr(1));
+                auto reg = registers::to_register_enum(tokens[2].substr(1));
 
                 program->push_back(ADD_LIT_REG);
                 program->push_back(value >> 24);
@@ -167,8 +167,8 @@ Memory *compile(std::string source)
             {
                 std::cout << utils::colorize("Compiling ADD_REG_REG", utils::Colors::FG_GREEN) << std::endl;
 
-                auto reg1 = to_register(tokens[1].substr(1));
-                auto reg2 = to_register(tokens[2].substr(1));
+                auto reg1 = registers::to_register_enum(tokens[1].substr(1));
+                auto reg2 = registers::to_register_enum(tokens[2].substr(1));
 
                 program->push_back(ADD_REG_REG);
                 program->push_back(reg1);
@@ -187,7 +187,7 @@ Memory *compile(std::string source)
             std::cout << utils::colorize("Compiling INC", utils::Colors::FG_GREEN) << std::endl;
             // inc r1
             program->push_back(INC_REG);
-            program->push_back(to_register(tokens[1].substr(1)));
+            program->push_back(registers::to_register_enum(tokens[1].substr(1)));
             ip += 2;
             // TODO
         }
@@ -205,7 +205,7 @@ Memory *compile(std::string source)
             auto label_address = label_addresses[label];
 
             program->push_back(JMP_NE);
-            program->push_back(to_register(tokens[1].substr(1)));
+            program->push_back(registers::to_register_enum(tokens[1].substr(1)));
             program->push_back(label_address >> 24);
             program->push_back(label_address >> 16);
             program->push_back(label_address >> 8);
@@ -230,7 +230,7 @@ Memory *compile(std::string source)
             }
             std::cout << utils::colorize("label_address: ", utils::FG_YELLOW, utils::BOLD) << utils::hexstr32(label_address) << std::endl;
 
-            program->push_back(CALL_LIT);
+            program->push_back(CALL);
             program->push_back(label_address >> 24);
             program->push_back(label_address >> 16);
             program->push_back(label_address >> 8);
@@ -293,7 +293,7 @@ Memory *compile(std::string source)
         program->at(address + 4) = label_address;
     }
 
-    auto memory = new Memory(program->size());
+    auto memory = new memory::Memory(program->size());
     memory->write(0x00, program->data(), program->size());
 
     return memory;

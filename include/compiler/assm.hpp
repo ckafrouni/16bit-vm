@@ -5,4 +5,4 @@
 
 #include "memory.hpp"
 
-Memory *compile(std::string source);
+memory::Memory *compile(std::string source);
