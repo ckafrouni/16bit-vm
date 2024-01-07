@@ -6,4 +6,13 @@ push $0x4
 push $0x5
 push $0x6
 push $0x7
+
+pop %r1
+pop %r2
+pop %r3
+pop %r4
+
+add %r1 %r2
+
+push %r2
 halt

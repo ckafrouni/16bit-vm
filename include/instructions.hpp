@@ -9,6 +9,8 @@
 namespace instructions
 {
 
+    typedef uint32_t Addr;
+
     enum OpCode
     {
         HALT = 0x00,

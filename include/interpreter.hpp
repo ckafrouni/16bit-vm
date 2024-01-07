@@ -5,7 +5,7 @@
 #include "instructions.hpp"
 #include "memory.hpp"
 #include "registers.hpp"
-#include "addr.hpp"
+
 
 namespace vm
 {
@@ -37,7 +37,7 @@ namespace vm
         // Execution
 
         // Run the program with specified mode
-        uint32_t run(Addr entry_point, Mode mode);
+        uint32_t run(instructions::Addr entry_point, Mode mode);
 
         // Fetchs the next opcode
         inline instructions::OpCode fetch()
@@ -52,11 +52,11 @@ namespace vm
 
         // Fetching and Reading
 
-        // registers::RegisterEnum readRegister(memory::Memory *program, Addr address);
+        // registers::RegisterEnum readRegister(memory::Memory *program, instructions::Addr address);
         registers::RegisterEnum readRegisterAtIP();
-        // Addr readAddress(memory::Memory *program, Addr address);
-        Addr readAddressAtIP();
-        // uint32_t readLiteral(memory::Memory *program, Addr address);
+        // instructions::Addr readinstructions::Address(memory::Memory *program, instructions::Addr address);
+        instructions::Addr readAddressAtIP();
+        // uint32_t readLiteral(memory::Memory *program, instructions::Addr address);
         uint32_t readLiteralAtIP();
 
         // Writing
@@ -64,7 +64,7 @@ namespace vm
         // Write the value to the specified register
         void writeToReg(registers::RegisterEnum reg, uint32_t val);
         // Write the value to the specified memory address
-        void writeToMem(Addr address, uint32_t val);
+        void writeToMem(instructions::Addr address, uint32_t val);
         // Push the value to the stack
         void push(uint32_t val);
         // Pop the value from the stack

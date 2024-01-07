@@ -7,7 +7,6 @@
 #include "registers.hpp"
 #include "interpreter.hpp"
 #include "instructions.hpp"
-#include "addr.hpp"
 
 #include "assembly/compiler.hpp"
 
@@ -33,22 +32,31 @@ int main(int argc, char **argv)
     std::cout << std::endl;
 
     // Initialize
-    uint32_t memory_size = 0xbeef;
-    auto mem = memory::Memory(memory_size);
+    static const uint32_t TOTAL_MEM_SIZE = 0x0000fff0;
+
+    static const uint32_t START_ADDR = 0x00000000;
+    static const uint32_t STACK_ADDR = TOTAL_MEM_SIZE;
+
+    auto mem = memory::Memory(TOTAL_MEM_SIZE);
     // auto s_addr = 0x00;
-    auto s = "Hello, World!";
+    // auto s = "Hello, World!";
     // auto s2_addr = 0xbe00;
-    auto s2 = "I'm Chris!";
-    mem.write(0x00, (uint8_t *)s, strlen(s));
-    mem.write(0xbe00, (uint8_t *)s2, strlen(s2));
+    // auto s2 = "I'm Chris!";
+    // mem.write(0x00, (uint8_t *)s, strlen(s));
+    // mem.write(0xbe00, (uint8_t *)s2, strlen(s2));
 
     auto rf = registers::RegisterFile();
-    rf.set(registers::IP, 0x00);
-    rf.set(registers::SP, 0xbeeb);
-    rf.set(registers::FP, 0xbeef);
-    rf.set(registers::ACC, 0x00);
+    rf.set(registers::IP, START_ADDR);
+    rf.set(registers::SP, STACK_ADDR);
+    rf.set(registers::FP, rf.get(registers::SP));
 
     auto interpreter = vm::Interpreter(&mem, &rf);
+
+    // interpreter.push(0xffffffff);
+    // interpreter.push(0xeeeeeeee);
+    // auto val = interpreter.pop();
+    // std::cout << "Popped: " << std::hex << val << std::endl;
+    // interpreter.push(0xddddd);
 
     // Inspect before running
     std::cout << utils::colorize("## Inspection before running:", utils::FG_RED, utils::BOLD) << std::endl;
@@ -65,7 +73,7 @@ int main(int argc, char **argv)
     // Run
     if (interpreter.load(program))
     {
-        auto ret = interpreter.run(0x00, vm::RELEASE);
+        auto ret = interpreter.run(0x00, vm::DEBUG);
         (void)ret;
     }
     else

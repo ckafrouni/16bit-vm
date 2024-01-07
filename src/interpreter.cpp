@@ -10,7 +10,6 @@
 #include "instructions.hpp"
 #include "memory.hpp"
 #include "registers.hpp"
-#include "addr.hpp"
 
 using namespace instructions;
 using namespace vm;
@@ -291,7 +290,7 @@ uint32_t Interpreter::run(Addr entry_point, Mode mode)
             auto op = fetch();
 
             std::cout << std::endl;
-            std::cout << utils::colorize("## Next instruction: " + instructions::to_string(op), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
+            std::cout << utils::colorize("## Next instruction: " + to_string(op), utils::Colors::FG_WHITE, utils::Styles::BOLD) << std::endl;
             std::cout << utils::colorize("## BREAK (Press a key to continue)", utils::Colors::FG_YELLOW, utils::Styles::BOLD);
             std::cin.get();
 

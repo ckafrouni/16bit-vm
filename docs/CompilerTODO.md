@@ -57,9 +57,9 @@ namespace compiler {
     class Compiler {
     private:
         std::unique_ptr<memory::Memory> program;
-        std::map<std::string, Addr> labels;
-        std::map<Addr, std::string> unresolved_labels;
-        Addr current_addr = 0x00;
+        std::map<std::string, instructions::Addr> labels;
+        std::map<instructions::Addr, std::string> unresolved_labels;
+        instructions::Addr current_addr = 0x00;
 
         std::unique_ptr<Parser> parser;
         std::unique_ptr<BytecodeGenerator> bytecodeGenerator;
@@ -87,8 +87,8 @@ namespace compiler {
         
         void generate(const std::vector<Instruction>& instructions);
         // Methods for encoding each instruction type
-        Addr encode_mov_lit_reg(Addr addr, uint32_t lit, uint8_t reg);
-        Addr encode_mov_reg_reg(Addr addr, uint8_t reg1, uint8_t reg2);
+        instructions::Addr encode_mov_lit_reg(instructions::Addr addr, uint32_t lit, uint8_t reg);
+        instructions::Addr encode_mov_reg_reg(instructions::Addr addr, uint8_t reg1, uint8_t reg2);
         // Add other encoding methods here
     };
 
