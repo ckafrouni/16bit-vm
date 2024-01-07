@@ -1,16 +1,18 @@
-# cpp-compiler
+# Assembly Language Interpreter
 
-## Table of Contents
+This project is an interpreter for a custom assembly language. It includes a compiler for converting assembly code into machine code, and an interpreter for executing the machine code.
 
-- [Description](#description)
-- [Usage](#usage)
+## Project Structure
 
-## Description
+- `src/`: Contains the source code for the interpreter and compiler.
+- `include/`: Contains the header files for the interpreter and compiler.
+- `tests/`: Contains assembly code for testing the interpreter and compiler.
+- `docs/`: Contains documentation for the project.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nisl quis
-molestie ultricies, nunc nisl aliquam nunc, quis aliquet nunc quam eu eros.
+## Building the Project
 
-## Usage
+To build the project, run the `build.sh` script:
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nisl quis
-molestie ultricies, nunc nisl aliquam nunc, quis aliquet nunc quam eu eros.
+```sh
+./build.sh
+```
