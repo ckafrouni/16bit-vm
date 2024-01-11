@@ -1,4 +1,5 @@
 use crate::cpu::CPUMode;
+use std::env;
 
 mod byte_array;
 mod cpu;
@@ -40,9 +41,21 @@ fn main() {
     println!("{:?}", code.slice(0, code.size()));
 
     let mut cpu = cpu::CPU::default();
-    // let res = cpu.run(CPUMode::DebugInteractive, &code);
-    let res = cpu.run(CPUMode::DebugInteractive, &code);
-    // let res = cpu.run(CPUMode::Release, &code);
+    let mode = match env::var("MODE") {
+        Ok(val) => {
+            if val == "int" {
+                CPUMode::DebugInteractive
+            } else if val == "dbg" {
+                CPUMode::Debug
+            } else {
+                CPUMode::Release
+            }
+        }
+        Err(_) => CPUMode::Release,
+    };
+
+    let res = cpu.run(mode, &code);
     println!("\x1b[1;33m# Result:\x1b[0m {:?}", res);
+
     println!("{:?}", cpu)
 }
