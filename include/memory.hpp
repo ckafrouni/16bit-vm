@@ -104,6 +104,10 @@ namespace memory
                     if (j == 8)
                         str += colorize("| ", BOLD);
                     auto address = i * columns + j;
+
+                    if (address >= this->size)
+                        break;
+
                     auto value = this->memory[address];
                     std::stringstream s;
                     s << std::hex << std::setw(2) << std::setfill('0') << (int)value;
@@ -123,14 +127,14 @@ namespace memory
                     auto value = this->memory[address];
                     if (value == 0)
                     {
-                        str += colorize(".", FG_BLACK, BOLD);
+                        str += colorize(". ", FG_BLACK, BOLD);
                     }
                     else
                     {
                         str += colorize(std::string(1, value), FG_BWHITE, BOLD);
                     }
                 }
-                str += colorize(" |", BOLD);
+                str += colorize("|", BOLD);
                 str += "\n";
             }
             return str;

@@ -1,0 +1,69 @@
+<_space_any> ::= " "*
+<_space_min_one> ::= " "+
+
+/* Operands */
+
+<src> ::= <imm> | <reg> | <addr>
+<dst> ::= <reg> | <addr>
+
+<src_dst> ::= <src> " "* "=" " "* <dst>
+<dst_src_src> ::= <dst> " "* "=" " "* <src> " "* "," " "* <src>
+
+<imm> ::= "$" <lit> 
+<reg> ::= "r" [1-4]
+<addr> ::= "&" <reg> | "&" <square_brack_expr> | "&" <label>
+
+
+/* Tokens */
+
+<lit> ::= <hexa> | <deci>
+<deci> ::= [0-9]+
+<hexa> ::= "0x" ([0-9] | [a-f] | [A-F])+
+
+<square_brack_expr> ::= "[" " " <expr> " " "]"
+ 
+<expr> ::= <imm> | <label> | "(" <expr> " " <op> " " <expr> ")"
+<op> ::= "+" | "-" | "*" | "/" | "%"
+
+<label> ::= "!" <identifier>
+
+<identifier> ::= (([a-z] | [A-Z])+ ("_" | [0-9])?)+
+
+
+/* Instructions */
+
+<mov> ::= "mov" " "+ <src_dst>
+
+<push> ::= "push" " "+ <src>
+<pop> ::= "pop" " "+ <dst>
+
+<call> ::= "call" " "+ <src>
+<ret> ::= "ret"
+<syscall> ::= "syscall" <identifier>
+
+<add> ::= "add" " "+ <dst_src_src>
+<sub> ::= "sub" " "+ <dst_src_src>
+<mul> ::= "mul" " "+ <dst_src_src>
+<div> ::= "div" " "+ <dst_src_src>
+
+<not> ::= "not" " "+ <dst>
+<and> ::= "and" " "+ <dst_src_src>
+<or> ::= "or" " "+ <dst_src_src>
+<xor> ::= "xor" " "+ <dst_src_src>
+
+<shl> ::= "shl" " "+ <dst> " "* "," <imm> 
+<shr> ::= "shl" " "+ <dst> " "* "," <imm> 
+
+
+<inc> ::= "inc" " "+ <dst> <imm>
+<dec> ::= "dec" " "+ <dst> <imm>
+
+<jmp> ::= "jmp" " "+ <addr>
+<jeq> ::= "jeq" " "+ <addr> " "+ "(" " "* <src> " "* "," " "* <src> " "* ")" 
+<jne> ::= "jne" " "+ <addr> " "+ "(" " "* <src> " "* "," " "* <src> " "* ")" 
+<jlt> ::= "jlt" " "+ <addr> " "+ "(" " "* <src> " "* "," " "* <src> " "* ")" 
+<jle> ::= "jle" " "+ <addr> " "+ "(" " "* <src> " "* "," " "* <src> " "* ")" 
+<jgt> ::= "jgt" " "+ <addr> " "+ "(" " "* <src> " "* "," " "* <src> " "* ")" 
+<jge> ::= "jge" " "+ <addr> " "+ "(" " "* <src> " "* "," " "* <src> " "* ")" 
+
+

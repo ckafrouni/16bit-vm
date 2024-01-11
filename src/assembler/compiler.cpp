@@ -6,7 +6,7 @@
 #include <sstream>
 #include <map>
 
-#include "assembly/compiler.hpp"
+#include "assembler/compiler.hpp"
 
 #include "utils/fmt.hpp"
 #include "utils/hexutils.hpp"
@@ -126,7 +126,7 @@ void compiler::Compiler::assemble(std::string source)
             {
                 std::cout << utils::colorize("Compiling ADD_REG_REG_REG", utils::Colors::FG_GREEN) << std::endl;
                 // add %<dst> %<src1> %<src2>
-                
+
                 auto reg1 = registers::to_register_enum(tokens[1].substr(1));
                 auto reg2 = registers::to_register_enum(tokens[2].substr(1));
                 auto reg3 = registers::to_register_enum(tokens[3].substr(1));
