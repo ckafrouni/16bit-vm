@@ -1,6 +1,0 @@
-main:
-mov $0x01 %r1
-mov $0x02 %r2
-
-push $0x01
-halt
