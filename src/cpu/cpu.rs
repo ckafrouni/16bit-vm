@@ -14,6 +14,7 @@ impl Default for CPUState {
     }
 }
 
+#[allow(unused)]
 pub enum CPUMode {
     Debug,            // Debug mode : will print debug info
     DebugInteractive, // Debug mode : will print debug info and wait for user input
@@ -158,7 +159,7 @@ impl CPU {
                         _n_ops, self.ip, op, operands
                     );
 
-                    println!("\x1b[1;33m# Press enter to continue...\x1b[0m");
+                    println!("\x1b[33m# Press <enter> to continue...\x1b[0m");
                     let mut _input = String::new();
                     std::io::stdin()
                         .read_line(&mut _input)
@@ -355,6 +356,7 @@ impl CPU {
 
     fn halt(&mut self) {
         self.state = CPUState::Halted;
+        self.ip += OpCode::Halt.size();
     }
 
     fn mov_imm_reg(&mut self, imm: u32, dst_reg: Reg) {

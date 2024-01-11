@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::cpu::CPUMode;
 
 mod byte_array;

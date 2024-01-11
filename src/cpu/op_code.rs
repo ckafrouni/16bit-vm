@@ -19,6 +19,7 @@ pub enum OpCode {
 }
 
 impl OpCode {
+    #[allow(dead_code)]
     pub fn operands(&self) -> Vec<Operand> {
         match self {
             OpCode::Halt => vec![],
@@ -78,6 +79,7 @@ pub enum Operand {
 }
 
 impl Operand {
+    #[allow(dead_code)]
     pub fn size(&self) -> u32 {
         match self {
             Operand::None => 0,

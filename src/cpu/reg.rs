@@ -15,8 +15,6 @@ pub enum Reg {
     R8,
 }
 
-const NUM_REGS: u32 = 8;
-
 // convert Reg to u8
 impl From<Reg> for u8 {
     fn from(val: Reg) -> Self {
