@@ -51,6 +51,8 @@ pub struct CPU {
     r6: u32,
     r7: u32,
     r8: u32,
+
+    modified_regs: Vec<Reg>,
 }
 
 // Contains methods for reading and writing registers
@@ -125,6 +127,7 @@ impl CPU {
         println!("{:?}", self);
 
         while self.state == CPUState::Running {
+            self.modified_regs.clear();
             _n_ops += 1;
             match self.fetch(code) {
                 Err(err) => return CPUResult::Error(err),
@@ -149,6 +152,7 @@ impl CPU {
         println!("{:?}", self);
 
         while self.state == CPUState::Running {
+            self.modified_regs.clear();
             _n_ops += 1;
 
             match self.fetch(code) {
@@ -362,30 +366,39 @@ impl CPU {
     fn mov_imm_reg(&mut self, imm: u32, dst_reg: Reg) {
         self.set_reg(dst_reg, imm);
         self.ip += OpCode::MovImmReg.size();
+        self.modified_regs.push(dst_reg);
+        self.modified_regs.push(Reg::IP);
     }
 
     fn mov_reg_reg(&mut self, src_reg: Reg, dst_reg: Reg) {
         let val = self.get_reg(src_reg);
         self.set_reg(dst_reg, val);
         self.ip += OpCode::MovRegReg.size();
+        self.modified_regs.push(dst_reg);
+        self.modified_regs.push(Reg::IP);
     }
 
     fn mov_reg_mem(&mut self, src_reg: Reg, dst: u32) {
         let val = self.get_reg(src_reg);
         self.set_mem(dst, val);
         self.ip += OpCode::MovRegMem.size();
+        self.modified_regs.push(Reg::IP);
     }
 
     fn mov_mem_reg(&mut self, src: u32, dst_reg: Reg) {
         let val = self.get_mem(src);
         self.set_reg(dst_reg, val);
         self.ip += OpCode::MovMemReg.size();
+        self.modified_regs.push(dst_reg);
+        self.modified_regs.push(Reg::IP);
     }
 
     fn push_imm(&mut self, imm: u32) {
         self.sp -= 4;
         self.set_mem(self.sp, imm);
         self.ip += OpCode::PushImm.size();
+        self.modified_regs.push(Reg::IP);
+        self.modified_regs.push(Reg::SP);
     }
 
     fn push_reg(&mut self, reg: Reg) {
@@ -393,6 +406,8 @@ impl CPU {
         self.sp -= 4;
         self.set_mem(self.sp, val);
         self.ip += OpCode::PushReg.size();
+        self.modified_regs.push(Reg::IP);
+        self.modified_regs.push(Reg::SP);
     }
 
     fn push_mem(&mut self, addr: u32) {
@@ -400,6 +415,8 @@ impl CPU {
         self.sp -= 4;
         self.set_mem(self.sp, val);
         self.ip += OpCode::PushMem.size();
+        self.modified_regs.push(Reg::IP);
+        self.modified_regs.push(Reg::SP);
     }
 
     fn pop_reg(&mut self, reg: Reg) {
@@ -407,6 +424,9 @@ impl CPU {
         self.sp += 4;
         self.set_reg(reg, val);
         self.ip += OpCode::PopReg.size();
+        self.modified_regs.push(reg);
+        self.modified_regs.push(Reg::IP);
+        self.modified_regs.push(Reg::SP);
     }
 
     fn pop_mem(&mut self, addr: u32) {
@@ -414,6 +434,8 @@ impl CPU {
         self.sp += 4;
         self.set_mem(addr, val);
         self.ip += OpCode::PopMem.size();
+        self.modified_regs.push(Reg::IP);
+        self.modified_regs.push(Reg::SP);
     }
 }
 
@@ -458,7 +480,10 @@ impl std::fmt::Debug for CPU {
 
         for (reg, val) in general_regs.iter() {
             write!(f, "\x1B[34m│\x1B[0m {:?}   \x1B[34m│\x1B[0m", reg)?;
-            if *val != 0 {
+            // if register was modified during last instruction
+            if self.modified_regs.contains(reg) {
+                writeln!(f, " \x1B[33m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val)?;
+            } else if *val != 0 {
                 writeln!(f, " {:08x} \x1B[34m│\x1B[0m", val)?;
             } else {
                 writeln!(f, " \x1B[2m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val)?;
