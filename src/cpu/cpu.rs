@@ -1,5 +1,5 @@
 use crate::byte_array;
-use crate::cpu::op_code::OpCode;
+use crate::cpu::op_code::{OpCode, Operand};
 use crate::cpu::reg::Reg;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -52,177 +52,9 @@ pub struct CPU {
     r8: u32,
 }
 
+// Contains methods for reading and writing registers
+// and memory, along with other attributes
 impl CPU {
-    pub fn run(&mut self, mode: CPUMode, code: &byte_array::ByteArray) -> CPUResult {
-        match mode {
-            CPUMode::Debug => self.run_debug(code),
-            CPUMode::DebugInteractive => self.run_debug_interactive(code),
-            CPUMode::Release => self.run_release(code),
-        }
-    }
-
-    pub fn run_debug(&mut self, code: &byte_array::ByteArray) -> CPUResult {
-        let mut _n_ops = 0;
-        self.state = CPUState::Running;
-        while self.state == CPUState::Running {
-            _n_ops += 1;
-            println!("\x1b[1;33m# Step {:02}\x1b[0m", _n_ops);
-            println!("{:?}", self);
-            if let Err(err) = self.step(code) {
-                return CPUResult::Error(err);
-            }
-        }
-        return CPUResult::Halt(self.r1);
-    }
-
-    pub fn run_debug_interactive(&mut self, code: &byte_array::ByteArray) -> CPUResult {
-        let mut _n_ops = 0;
-        self.state = CPUState::Running;
-        while self.state == CPUState::Running {
-            _n_ops += 1;
-            println!("\x1b[1;33m# Step {:02}\x1b[0m", _n_ops);
-            println!("{:?}", self);
-            println!("\x1b[1;33m# Press enter to continue...\x1b[0m");
-            let mut _input = String::new();
-            std::io::stdin()
-                .read_line(&mut _input)
-                .expect("Failed to read line");
-            if let Err(err) = self.step(code) {
-                return CPUResult::Error(err);
-            }
-        }
-        return CPUResult::Halt(self.r1);
-    }
-
-    pub fn run_release(&mut self, code: &byte_array::ByteArray) -> CPUResult {
-        let mut _n_ops = 0;
-        self.state = CPUState::Running;
-        while self.state == CPUState::Running {
-            _n_ops += 1;
-
-            // TODO: implement fetch and execute
-            // Ideally I'd like to split step into two functions:
-            // - fetch: fetch the next instruction with its operands
-            // - execute: execute the instruction
-            // Example:
-            // match self.fetch(code) {
-            //     Err(err) => return CPUResult::Error(err),
-            //     Ok((op, operands)) => self.execute(op, operands),
-            // }
-            // But I don't know how to do that in Rust yet.
-
-            if let Err(err) = self.step(code) {
-                return CPUResult::Error(err);
-            }
-        }
-        return CPUResult::Halt(self.r1);
-    }
-
-    pub fn step(&mut self, code: &byte_array::ByteArray) -> Result<(), CPUError> {
-        if self.state != CPUState::Running {
-            return Err(CPUError::CPUNotRunning);
-        }
-
-        if self.ip >= code.size() {
-            self.state = CPUState::Halted;
-            return Err(CPUError::IPOutOfBounds);
-        }
-
-        let op = OpCode::from(code.get8(self.ip as u32));
-        self.ip += 1;
-
-        match op {
-            OpCode::Halt => {
-                self.state = CPUState::Halted;
-                Ok(())
-            }
-
-            OpCode::MovImmReg => {
-                let imm = code.get32(self.ip);
-                self.ip += 4;
-
-                let dst_reg: Reg = Reg::from(code.get8(self.ip));
-                self.ip += 1;
-
-                self.mov_imm_reg(imm, dst_reg);
-                Ok(())
-            }
-
-            OpCode::MovRegReg => {
-                let src_reg = Reg::from(code.get8(self.ip));
-                self.ip += 1;
-
-                let dst_reg = Reg::from(code.get8(self.ip));
-                self.ip += 1;
-
-                self.mov_reg_reg(src_reg, dst_reg);
-                Ok(())
-            }
-
-            OpCode::MovRegMem => {
-                let src_reg = Reg::from(code.get8(self.ip));
-                self.ip += 1;
-
-                let dst_addr: u32 = code.get32(self.ip);
-                self.ip += 4;
-
-                self.mov_reg_mem(src_reg, dst_addr);
-                Ok(())
-            }
-
-            OpCode::MovMemReg => {
-                let src_addr = code.get32(self.ip);
-                self.ip += 4;
-
-                let dst_reg = Reg::from(code.get8(self.ip));
-                self.ip += 1;
-
-                self.mov_mem_reg(src_addr, dst_reg);
-                Ok(())
-            }
-
-            OpCode::PushImm => {
-                let imm = code.get32(self.ip);
-                self.ip += 4;
-
-                self.push_imm(imm);
-                Ok(())
-            }
-
-            OpCode::PushReg => {
-                let reg = Reg::from(code.get8(self.ip));
-                self.ip += 1;
-
-                self.push_reg(reg);
-                Ok(())
-            }
-
-            OpCode::PushMem => {
-                let addr = code.get32(self.ip);
-                self.ip += 4;
-
-                self.push_mem(addr);
-                Ok(())
-            }
-
-            OpCode::PopReg => {
-                let reg = Reg::from(code.get8(self.ip));
-                self.ip += 1;
-
-                self.pop_reg(reg);
-                Ok(())
-            }
-
-            OpCode::PopMem => {
-                let addr = code.get32(self.ip);
-                self.ip += 4;
-
-                self.pop_mem(addr);
-                Ok(())
-            }
-        }
-    }
-
     pub fn set_state(&mut self, state: CPUState) {
         self.state = state;
     }
@@ -272,53 +104,314 @@ impl CPU {
     pub fn get_mem(&self, addr: u32) -> u32 {
         todo!("get_mem");
     }
+}
+
+// Contains methods for stepping through the code
+impl CPU {
+    pub fn run(&mut self, mode: CPUMode, code: &byte_array::ByteArray) -> CPUResult {
+        match mode {
+            CPUMode::Debug => self.run_debug(code),
+            CPUMode::DebugInteractive => self.run_debug_interactive(code),
+            CPUMode::Release => self.run_release(code),
+        }
+    }
+
+    pub fn run_debug(&mut self, code: &byte_array::ByteArray) -> CPUResult {
+        let mut _n_ops = 0;
+        self.state = CPUState::Running;
+
+        println!("Starting CPU state:");
+        println!("{:?}", self);
+
+        while self.state == CPUState::Running {
+            _n_ops += 1;
+            match self.fetch(code) {
+                Err(err) => return CPUResult::Error(err),
+                Ok((op, operands)) => {
+                    println!(
+                        "Step {:02}\nIP: {:08x} - {:?} {:?}",
+                        _n_ops, self.ip, op, operands
+                    );
+                    self.execute(op, operands);
+                    println!("{:?}", self);
+                }
+            }
+        }
+        return CPUResult::Halt(self.r1);
+    }
+
+    pub fn run_debug_interactive(&mut self, code: &byte_array::ByteArray) -> CPUResult {
+        let mut _n_ops = 0;
+        self.state = CPUState::Running;
+
+        println!("Starting CPU state:");
+        println!("{:?}", self);
+
+        while self.state == CPUState::Running {
+            _n_ops += 1;
+
+            match self.fetch(code) {
+                Err(err) => return CPUResult::Error(err),
+                Ok((op, operands)) => {
+                    println!(
+                        "Step {:02}\nIP: {:08x} - {:?} {:?}",
+                        _n_ops, self.ip, op, operands
+                    );
+
+                    println!("\x1b[1;33m# Press enter to continue...\x1b[0m");
+                    let mut _input = String::new();
+                    std::io::stdin()
+                        .read_line(&mut _input)
+                        .expect("Failed to read line");
+
+                    self.execute(op, operands);
+
+                    println!("{:?}", self);
+                }
+            }
+        }
+        return CPUResult::Halt(self.r1);
+    }
+
+    pub fn run_release(&mut self, code: &byte_array::ByteArray) -> CPUResult {
+        let mut _n_ops = 0;
+        self.state = CPUState::Running;
+        while self.state == CPUState::Running {
+            _n_ops += 1;
+
+            match self.fetch(code) {
+                Err(err) => return CPUResult::Error(err),
+                Ok((op, operands)) => {
+                    println!(
+                        "Step {:02}\nIP: {:08x} - {:?} {:?}",
+                        _n_ops, self.ip, op, operands
+                    );
+                    self.execute(op, operands)
+                }
+            }
+        }
+        return CPUResult::Halt(self.r1);
+    }
+}
+
+impl CPU {
+    pub fn fetch(
+        &mut self,
+        code: &byte_array::ByteArray,
+    ) -> Result<(OpCode, Vec<Operand>), CPUError> {
+        if self.state != CPUState::Running {
+            return Err(CPUError::CPUNotRunning);
+        }
+
+        if self.ip >= code.size() {
+            self.state = CPUState::Halted;
+            return Err(CPUError::IPOutOfBounds);
+        }
+
+        let mut ip = self.ip;
+
+        let op = OpCode::from(code.get8(ip as u32));
+        ip += 1;
+
+        match op {
+            OpCode::Halt => Ok((OpCode::Halt, [Operand::None].to_vec())),
+
+            OpCode::MovImmReg => {
+                let imm = code.get32(ip);
+                ip += 4;
+
+                let dst_reg: Reg = Reg::from(code.get8(ip));
+
+                Ok((
+                    OpCode::MovImmReg,
+                    [Operand::Imm(imm), Operand::Reg(dst_reg)].to_vec(),
+                ))
+            }
+
+            OpCode::MovRegReg => {
+                let src_reg = Reg::from(code.get8(ip));
+                ip += 1;
+
+                let dst_reg = Reg::from(code.get8(ip));
+
+                Ok((
+                    OpCode::MovRegReg,
+                    [Operand::Reg(src_reg), Operand::Reg(dst_reg)].to_vec(),
+                ))
+            }
+
+            OpCode::MovRegMem => {
+                let src_reg = Reg::from(code.get8(ip));
+                ip += 1;
+
+                let dst_addr: u32 = code.get32(ip);
+
+                Ok((
+                    OpCode::MovRegMem,
+                    [Operand::Reg(src_reg), Operand::Mem(dst_addr)].to_vec(),
+                ))
+            }
+
+            OpCode::MovMemReg => {
+                let src_addr = code.get32(ip);
+                ip += 4;
+
+                let dst_reg = Reg::from(code.get8(ip));
+
+                Ok((
+                    OpCode::MovMemReg,
+                    [Operand::Mem(src_addr), Operand::Reg(dst_reg)].to_vec(),
+                ))
+            }
+
+            OpCode::PushImm => {
+                let imm = code.get32(ip);
+
+                Ok((OpCode::PushImm, [Operand::Imm(imm)].to_vec()))
+            }
+
+            OpCode::PushReg => {
+                let reg = Reg::from(code.get8(ip));
+
+                Ok((OpCode::PushReg, [Operand::Reg(reg)].to_vec()))
+            }
+
+            OpCode::PushMem => {
+                let addr = code.get32(ip);
+
+                Ok((OpCode::PushMem, [Operand::Mem(addr)].to_vec()))
+            }
+
+            OpCode::PopReg => {
+                let reg = Reg::from(code.get8(ip));
+
+                Ok((OpCode::PopReg, [Operand::Reg(reg)].to_vec()))
+            }
+
+            OpCode::PopMem => {
+                let addr = code.get32(ip);
+
+                Ok((OpCode::PopMem, [Operand::Mem(addr)].to_vec()))
+            }
+        }
+    }
+}
+
+impl CPU {
+    fn execute(&mut self, op: OpCode, operands: Vec<Operand>) {
+        match op {
+            OpCode::Halt => self.halt(),
+
+            OpCode::MovImmReg => {
+                let imm = operands[0].unwrap_imm();
+                let dst_reg = operands[1].unwrap_reg();
+                self.mov_imm_reg(imm, dst_reg);
+            }
+
+            OpCode::MovRegReg => {
+                let src_reg = operands[0].unwrap_reg();
+                let dst_reg = operands[1].unwrap_reg();
+                self.mov_reg_reg(src_reg, dst_reg);
+            }
+
+            OpCode::MovRegMem => {
+                let src_reg = operands[0].unwrap_reg();
+                let dst_addr = operands[1].unwrap_mem();
+                self.mov_reg_mem(src_reg, dst_addr);
+            }
+
+            OpCode::MovMemReg => {
+                let src_addr = operands[0].unwrap_mem();
+                let dst_reg = operands[1].unwrap_reg();
+                self.mov_mem_reg(src_addr, dst_reg);
+            }
+
+            OpCode::PushImm => {
+                let imm = operands[0].unwrap_imm();
+                self.push_imm(imm);
+            }
+
+            OpCode::PushReg => {
+                let reg = operands[0].unwrap_reg();
+                self.push_reg(reg);
+            }
+
+            OpCode::PushMem => {
+                let addr = operands[0].unwrap_mem();
+                self.push_mem(addr);
+            }
+
+            OpCode::PopReg => {
+                let reg = operands[0].unwrap_reg();
+                self.pop_reg(reg);
+            }
+
+            OpCode::PopMem => {
+                let addr = operands[0].unwrap_mem();
+                self.pop_mem(addr);
+            }
+        }
+    }
+
+    fn halt(&mut self) {
+        self.state = CPUState::Halted;
+    }
 
     fn mov_imm_reg(&mut self, imm: u32, dst_reg: Reg) {
         self.set_reg(dst_reg, imm);
+        self.ip += OpCode::MovImmReg.size();
     }
 
     fn mov_reg_reg(&mut self, src_reg: Reg, dst_reg: Reg) {
         let val = self.get_reg(src_reg);
         self.set_reg(dst_reg, val);
+        self.ip += OpCode::MovRegReg.size();
     }
 
     fn mov_reg_mem(&mut self, src_reg: Reg, dst: u32) {
         let val = self.get_reg(src_reg);
         self.set_mem(dst, val);
+        self.ip += OpCode::MovRegMem.size();
     }
 
     fn mov_mem_reg(&mut self, src: u32, dst_reg: Reg) {
         let val = self.get_mem(src);
         self.set_reg(dst_reg, val);
+        self.ip += OpCode::MovMemReg.size();
     }
 
     fn push_imm(&mut self, imm: u32) {
         self.sp -= 4;
         self.set_mem(self.sp, imm);
+        self.ip += OpCode::PushImm.size();
     }
 
     fn push_reg(&mut self, reg: Reg) {
         let val = self.get_reg(reg);
         self.sp -= 4;
         self.set_mem(self.sp, val);
+        self.ip += OpCode::PushReg.size();
     }
 
     fn push_mem(&mut self, addr: u32) {
         let val = self.get_mem(addr);
         self.sp -= 4;
         self.set_mem(self.sp, val);
+        self.ip += OpCode::PushMem.size();
     }
 
     fn pop_reg(&mut self, reg: Reg) {
         let val = self.get_mem(self.sp);
         self.sp += 4;
         self.set_reg(reg, val);
+        self.ip += OpCode::PopReg.size();
     }
 
     fn pop_mem(&mut self, addr: u32) {
         let val = self.get_mem(self.sp);
         self.sp += 4;
         self.set_mem(addr, val);
+        self.ip += OpCode::PopMem.size();
     }
 }
 

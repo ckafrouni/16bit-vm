@@ -43,7 +43,7 @@ fn main() {
 
     let mut cpu = cpu::CPU::default();
     // let res = cpu.run(CPUMode::DebugInteractive, &code);
-    let res = cpu.run(CPUMode::Debug, &code);
+    let res = cpu.run(CPUMode::DebugInteractive, &code);
     // let res = cpu.run(CPUMode::Release, &code);
     println!("\x1b[1;33m# Result:\x1b[0m {:?}", res);
     println!("{:?}", cpu)
