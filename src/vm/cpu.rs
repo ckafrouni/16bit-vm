@@ -1,17 +1,16 @@
-use crate::byte_array;
-use crate::cpu::op_code::{OpCode, Operand};
-use crate::cpu::reg::Reg;
+use std::io::Write;
+
+use super::{
+    mmu::MMU,
+    op_code::{OpCode, Operand},
+    reg::Reg,
+    VMError,
+};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CPUState {
     Running,
     Halted,
-}
-
-impl Default for CPUState {
-    fn default() -> Self {
-        CPUState::Halted
-    }
 }
 
 #[allow(unused)]
@@ -21,21 +20,14 @@ pub enum CPUMode {
     Release,
 }
 
-#[derive(Debug)]
-pub enum CPUResult {
-    Halt(u32),
-    Error(CPUError),
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CPUError {
-    IPOutOfBounds,
     CPUNotRunning,
 }
 
-#[derive(Default)]
 pub struct CPU {
     state: CPUState,
+    mmu: MMU,
 
     // Special purpose registers
     ip: u32,
@@ -58,12 +50,23 @@ pub struct CPU {
 // Contains methods for reading and writing registers
 // and memory, along with other attributes
 impl CPU {
-    pub fn set_state(&mut self, state: CPUState) {
-        self.state = state;
-    }
-
-    pub fn get_state(&self) -> CPUState {
-        self.state
+    pub fn new(mmu: MMU) -> Self {
+        Self {
+            state: CPUState::Halted,
+            modified_regs: Vec::new(),
+            mmu,
+            ip: 0,
+            sp: 0,
+            bp: 0,
+            r1: 0,
+            r2: 0,
+            r3: 0,
+            r4: 0,
+            r5: 0,
+            r6: 0,
+            r7: 0,
+            r8: 0,
+        }
     }
 
     pub fn set_reg(&mut self, reg: Reg, val: u32) {
@@ -98,28 +101,30 @@ impl CPU {
         }
     }
 
-    #[allow(unused)]
     pub fn set_mem(&mut self, addr: u32, val: u32) {
-        todo!("set_mem");
+        self.mmu.write32(addr, val).unwrap();
     }
 
-    #[allow(unused)]
     pub fn get_mem(&self, addr: u32) -> u32 {
-        todo!("get_mem");
+        self.mmu.read32(addr).unwrap()
+    }
+
+    pub fn slice(&self, start: u32, end: u32) -> Result<Vec<u8>, VMError> {
+        self.mmu.slice(start, end).map_err(|err| err.into())
     }
 }
 
 // Contains methods for stepping through the code
 impl CPU {
-    pub fn run(&mut self, mode: CPUMode, code: &byte_array::ByteArray) -> CPUResult {
+    pub fn run(&mut self, mode: CPUMode) -> Result<u32, VMError> {
         match mode {
-            CPUMode::Debug => self.run_debug(code),
-            CPUMode::DebugInteractive => self.run_debug_interactive(code),
-            CPUMode::Release => self.run_release(code),
+            CPUMode::Debug => self.run_debug(),
+            CPUMode::DebugInteractive => self.run_debug_interactive(),
+            CPUMode::Release => self.run_release(),
         }
     }
 
-    pub fn run_debug(&mut self, code: &byte_array::ByteArray) -> CPUResult {
+    pub fn run_debug(&mut self) -> Result<u32, VMError> {
         let mut _n_ops = 0;
         self.state = CPUState::Running;
 
@@ -129,22 +134,18 @@ impl CPU {
         while self.state == CPUState::Running {
             self.modified_regs.clear();
             _n_ops += 1;
-            match self.fetch(code) {
-                Err(err) => return CPUResult::Error(err),
-                Ok((op, operands)) => {
-                    println!(
-                        "Step {:02}\nIP: {:08x} - {:?} {:?}",
-                        _n_ops, self.ip, op, operands
-                    );
-                    self.execute(op, operands);
-                    println!("{:?}", self);
-                }
-            }
+            let (op, operands) = self.fetch()?;
+            println!(
+                "Step {:02}\nIP: {:08x} - {:?} {:?}",
+                _n_ops, self.ip, op, operands
+            );
+            self.execute(op, operands);
+            println!("{:?}", self);
         }
-        return CPUResult::Halt(self.r1);
+        Ok(self.r1)
     }
 
-    pub fn run_debug_interactive(&mut self, code: &byte_array::ByteArray) -> CPUResult {
+    pub fn run_debug_interactive(&mut self) -> Result<u32, VMError> {
         let mut _n_ops = 0;
         self.state = CPUState::Running;
 
@@ -155,77 +156,60 @@ impl CPU {
             self.modified_regs.clear();
             _n_ops += 1;
 
-            match self.fetch(code) {
-                Err(err) => return CPUResult::Error(err),
-                Ok((op, operands)) => {
-                    println!(
-                        "Step {:02}\nIP: {:08x} - {:?} {:?}",
-                        _n_ops, self.ip, op, operands
-                    );
+            let (op, operands) = self.fetch()?;
+            println!(
+                "Step {:02}\nIP: {:08x} - {:?} {:?}",
+                _n_ops, self.ip, op, operands
+            );
 
-                    println!("\x1b[33m# Press <enter> to continue...\x1b[0m");
-                    let mut _input = String::new();
-                    std::io::stdin()
-                        .read_line(&mut _input)
-                        .expect("Failed to read line");
+            print!("\x1b[33;2m<enter> to continue... \x1b[0m");
+            std::io::stdout().flush().unwrap(); // Flush the print statement
 
-                    self.execute(op, operands);
+            let mut _input = String::new();
+            std::io::stdin()
+                .read_line(&mut _input)
+                .expect("Failed to read line");
 
-                    println!("{:?}", self);
-                }
-            }
+            self.execute(op, operands);
+
+            println!("{:?}", self);
         }
-        return CPUResult::Halt(self.r1);
+
+        println!("Stack:");
+        println!("{:?}", self.mmu);
+
+        Ok(self.r1)
     }
 
-    pub fn run_release(&mut self, code: &byte_array::ByteArray) -> CPUResult {
-        let mut _n_ops = 0;
+    pub fn run_release(&mut self) -> Result<u32, VMError> {
         self.state = CPUState::Running;
         while self.state == CPUState::Running {
-            _n_ops += 1;
-
-            match self.fetch(code) {
-                Err(err) => return CPUResult::Error(err),
-                Ok((op, operands)) => {
-                    println!(
-                        "Step {:02}\nIP: {:08x} - {:?} {:?}",
-                        _n_ops, self.ip, op, operands
-                    );
-                    self.execute(op, operands)
-                }
-            }
+            let (op, operands) = self.fetch()?;
+            self.execute(op, operands);
         }
-        return CPUResult::Halt(self.r1);
+        Ok(self.r1)
     }
 }
 
 impl CPU {
-    pub fn fetch(
-        &mut self,
-        code: &byte_array::ByteArray,
-    ) -> Result<(OpCode, Vec<Operand>), CPUError> {
+    pub fn fetch(&mut self) -> Result<(OpCode, Vec<Operand>), VMError> {
         if self.state != CPUState::Running {
-            return Err(CPUError::CPUNotRunning);
-        }
-
-        if self.ip >= code.size() {
-            self.state = CPUState::Halted;
-            return Err(CPUError::IPOutOfBounds);
+            return Err(CPUError::CPUNotRunning.into());
         }
 
         let mut ip = self.ip;
 
-        let op = OpCode::from(code.get8(ip as u32));
+        let op = OpCode::from(self.mmu.read8(ip)?);
         ip += 1;
 
         match op {
             OpCode::Halt => Ok((OpCode::Halt, [Operand::None].to_vec())),
 
             OpCode::MovImmReg => {
-                let imm = code.get32(ip);
+                let imm = self.mmu.read32(ip)?;
                 ip += 4;
 
-                let dst_reg: Reg = Reg::from(code.get8(ip));
+                let dst_reg: Reg = Reg::from(self.mmu.read8(ip)?);
 
                 Ok((
                     OpCode::MovImmReg,
@@ -234,10 +218,10 @@ impl CPU {
             }
 
             OpCode::MovRegReg => {
-                let src_reg = Reg::from(code.get8(ip));
+                let src_reg = Reg::from(self.mmu.read8(ip)?);
                 ip += 1;
 
-                let dst_reg = Reg::from(code.get8(ip));
+                let dst_reg = Reg::from(self.mmu.read8(ip)?);
 
                 Ok((
                     OpCode::MovRegReg,
@@ -246,10 +230,10 @@ impl CPU {
             }
 
             OpCode::MovRegMem => {
-                let src_reg = Reg::from(code.get8(ip));
+                let src_reg = Reg::from(self.mmu.read8(ip)?);
                 ip += 1;
 
-                let dst_addr: u32 = code.get32(ip);
+                let dst_addr: u32 = self.mmu.read32(ip)?;
 
                 Ok((
                     OpCode::MovRegMem,
@@ -258,10 +242,10 @@ impl CPU {
             }
 
             OpCode::MovMemReg => {
-                let src_addr = code.get32(ip);
+                let src_addr = self.mmu.read32(ip)?;
                 ip += 4;
 
-                let dst_reg = Reg::from(code.get8(ip));
+                let dst_reg = Reg::from(self.mmu.read8(ip)?);
 
                 Ok((
                     OpCode::MovMemReg,
@@ -270,31 +254,31 @@ impl CPU {
             }
 
             OpCode::PushImm => {
-                let imm = code.get32(ip);
+                let imm = self.mmu.read32(ip)?;
 
                 Ok((OpCode::PushImm, [Operand::Imm(imm)].to_vec()))
             }
 
             OpCode::PushReg => {
-                let reg = Reg::from(code.get8(ip));
+                let reg = Reg::from(self.mmu.read8(ip)?);
 
                 Ok((OpCode::PushReg, [Operand::Reg(reg)].to_vec()))
             }
 
             OpCode::PushMem => {
-                let addr = code.get32(ip);
+                let addr = self.mmu.read32(ip)?;
 
                 Ok((OpCode::PushMem, [Operand::Mem(addr)].to_vec()))
             }
 
             OpCode::PopReg => {
-                let reg = Reg::from(code.get8(ip));
+                let reg = Reg::from(self.mmu.read8(ip)?);
 
                 Ok((OpCode::PopReg, [Operand::Reg(reg)].to_vec()))
             }
 
             OpCode::PopMem => {
-                let addr = code.get32(ip);
+                let addr = self.mmu.read32(ip)?;
 
                 Ok((OpCode::PopMem, [Operand::Mem(addr)].to_vec()))
             }
@@ -458,7 +442,10 @@ impl std::fmt::Debug for CPU {
 
         for (reg, val) in special_regs.iter() {
             write!(f, "\x1B[34m│\x1B[0m {:?}   \x1B[34m│\x1B[0m", reg)?;
-            if *val != 0 {
+            // if register was modified during last instruction
+            if self.modified_regs.contains(reg) {
+                writeln!(f, " \x1B[33m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val)?;
+            } else if *val != 0 {
                 writeln!(f, " {:08x} \x1B[34m│\x1B[0m", val)?;
             } else {
                 writeln!(f, " \x1B[2m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val)?;

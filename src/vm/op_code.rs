@@ -1,4 +1,4 @@
-use crate::cpu::reg::Reg;
+use super::reg::Reg;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]

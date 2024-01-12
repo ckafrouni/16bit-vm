@@ -1,3 +1,5 @@
+use super::{Device, DeviceError};
+
 #[derive(Clone)]
 pub struct ByteArray {
     data: Vec<u8>,
@@ -11,6 +13,14 @@ impl ByteArray {
             data: Vec::new(),
             start: 0,
             size: 0,
+        }
+    }
+
+    pub fn new_with_size(size: u32) -> Self {
+        Self {
+            data: vec![0; size as usize],
+            start: 0,
+            size: size as u32,
         }
     }
 
@@ -33,11 +43,11 @@ impl ByteArray {
         self.size += 4;
     }
 
-    pub fn get8(&self, index: u32) -> u8 {
+    pub fn read8(&self, index: u32) -> u8 {
         self.data[index as usize]
     }
 
-    pub fn get32(&self, index: u32) -> u32 {
+    pub fn read32(&self, index: u32) -> u32 {
         u32::from_be_bytes([
             self.data[index as usize],
             self.data[(index + 1) as usize],
@@ -46,8 +56,74 @@ impl ByteArray {
         ])
     }
 
-    pub fn slice(&self, start: u32, end: u32) -> ByteArray {
-        ByteArray::from(self.data[start as usize..end as usize].to_vec(), start)
+    pub fn slice(&self, start: u32, end: u32) -> Self {
+        Self::from(self.data[start as usize..end as usize].to_vec(), start)
+    }
+}
+
+impl Device for ByteArray {
+    fn read(&self, addr: u32, size: u32) -> Result<Vec<u8>, DeviceError> {
+        if addr < self.start || addr + size >= self.start + self.size {
+            return Err(DeviceError::InvalidAddress);
+        }
+
+        Ok(self.data[(addr - self.start) as usize..(addr - self.start + size) as usize].to_vec())
+    }
+
+    fn read8(&self, addr: u32) -> Result<u8, DeviceError> {
+        if addr < self.start || addr >= self.start + self.size {
+            return Err(DeviceError::InvalidAddress);
+        }
+
+        Ok(self.read8(addr - self.start))
+    }
+
+    fn read32(&self, addr: u32) -> Result<u32, DeviceError> {
+        if addr < self.start || addr + 3 >= self.start + self.size {
+            return Err(DeviceError::InvalidAddress);
+        }
+
+        Ok(self.read32(addr - self.start))
+    }
+
+    fn write(&mut self, addr: u32, size: u32, value: u32) -> Result<(), DeviceError> {
+        if addr < self.start || addr + size >= self.start + self.size {
+            return Err(DeviceError::InvalidAddress);
+        }
+
+        for i in 0..size {
+            self.data[(addr - self.start + i) as usize] = ((value >> (i * 8)) & 0xff) as u8;
+        }
+
+        Ok(())
+    }
+
+    fn write8(&mut self, addr: u32, value: u8) -> Result<(), DeviceError> {
+        if addr < self.start || addr >= self.start + self.size {
+            return Err(DeviceError::InvalidAddress);
+        }
+
+        self.data[(addr - self.start) as usize] = value;
+        Ok(())
+    }
+
+    fn write32(&mut self, addr: u32, value: u32) -> Result<(), DeviceError> {
+        if addr < self.start || addr + 3 >= self.start + self.size {
+            return Err(DeviceError::InvalidAddress);
+        }
+
+        println!(
+            "ByteArray::write32: {:#010x} <- {:#010x}",
+            (addr - self.start) as usize,
+            value
+        );
+
+        let bytes = value.to_be_bytes();
+        self.data[(addr - self.start) as usize] = bytes[0];
+        self.data[(addr - self.start + 1) as usize] = bytes[1];
+        self.data[(addr - self.start + 2) as usize] = bytes[2];
+        self.data[(addr - self.start + 3) as usize] = bytes[3];
+        Ok(())
     }
 }
 
@@ -82,7 +158,23 @@ impl std::fmt::Debug for ByteArray {
             sep
         )?;
 
+        let mut prev_empty = false;
+
         for (i, chunk) in self.data.chunks(16).enumerate() {
+            match chunk.iter().position(|&byte| byte != 0) {
+                Some(_) => prev_empty = false,
+                None => {
+                    if prev_empty {
+                        continue;
+                    } else if i == 0 {
+                        prev_empty = true;
+                    } else {
+                        prev_empty = false;
+                        writeln!(f, "{}", sep)?;
+                    }
+                }
+            }
+
             // Address
             write!(
                 f,
