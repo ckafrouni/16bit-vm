@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'baby_vm'",
+            "name": "Debug executable 'vm'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=baby_vm",
+                    "--bin=vm",
                     "--package=baby_vm"
                 ],
                 "filter": {
-                    "name": "baby_vm",
+                    "name": "vm",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'baby_vm'",
+            "name": "Debug unit tests in executable 'vm'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=baby_vm",
+                    "--bin=vm",
                     "--package=baby_vm"
                 ],
                 "filter": {
-                    "name": "baby_vm",
+                    "name": "vm",
                     "kind": "bin"
                 }
             },
