@@ -1,3 +1,7 @@
+pub mod errors;
+
+pub use errors::*;
+
 use super::Device;
 
 // Device is a trait that represents a device that can be mapped to the memory
@@ -11,13 +15,6 @@ pub enum AccessFlags {
     ReadWriteExecute,
     ReadOnly,
     WriteOnly,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum MMUError {
-    InvalidAddress,
-    IllegalMemoryAccess,
-    DeviceError,
 }
 
 pub struct Region {
@@ -88,10 +85,7 @@ impl MMU {
         }
 
         let offset = addr - region.start;
-        region
-            .device
-            .read8(offset)
-            .map_err(|_| MMUError::DeviceError)
+        region.device.read8(offset).map_err(|err| err.into())
     }
 
     pub fn read32(&self, addr: u32) -> Result<u32, MMUError> {
@@ -101,10 +95,7 @@ impl MMU {
         }
 
         let offset = addr - region.start;
-        region
-            .device
-            .read32(offset)
-            .map_err(|_| MMUError::DeviceError)
+        region.device.read32(offset).map_err(|err| err.into())
     }
 
     #[allow(dead_code)]
@@ -118,7 +109,7 @@ impl MMU {
         region
             .device
             .write8(offset, value)
-            .map_err(|_| MMUError::DeviceError)
+            .map_err(|err| err.into())
     }
 
     pub fn write32(&mut self, addr: u32, value: u32) -> Result<(), MMUError> {
@@ -131,6 +122,6 @@ impl MMU {
         region
             .device
             .write32(offset, value)
-            .map_err(|_| MMUError::DeviceError)
+            .map_err(|err| err.into())
     }
 }

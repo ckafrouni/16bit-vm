@@ -1,11 +1,11 @@
 use std::env;
 use vm::{
-    device::{self, ByteArray},
+    devices::{self, ByteArray},
     OpCode::*,
     Reg::*,
 };
 
-use crate::vm::device::Device;
+use crate::vm::devices::Device;
 
 mod utils;
 mod vm;
@@ -111,7 +111,7 @@ fn main() {
 
     println!("[{}:{}] # MMU: {:?}", file!(), line!(), mmu);
 
-    let mut stdout = device::Stdout::new();
+    let mut stdout = devices::Stdout::new();
     let s = "Hello, world!\n";
     stdout.write(0x0000_0000, s.as_bytes()).unwrap();
 

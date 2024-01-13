@@ -1,10 +1,4 @@
-#![allow(dead_code)]
-#[derive(Debug)]
-pub enum DeviceError {
-    InvalidAddress,
-    IllegalMemoryAccess,
-    DeviceError,
-}
+use super::DeviceError;
 
 pub trait Device {
     fn read8(&self, addr: u32) -> Result<u8, DeviceError>;

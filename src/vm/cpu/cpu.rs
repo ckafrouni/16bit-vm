@@ -1,11 +1,8 @@
 use std::io::Write;
 
-use super::{
-    mmu::MMU,
-    op_code::{OpCode, Operand},
-    reg::Reg,
-    ByteArray, VMError,
-};
+use crate::vm::{devices::ByteArray, VMError, MMU};
+
+use super::{OpCode, Operand, Reg, CPUError};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CPUState {
@@ -18,11 +15,6 @@ pub enum CPUMode {
     Debug,            // Debug mode : will print debug info
     DebugInteractive, // Debug mode : will print debug info and wait for user input
     Release,
-}
-
-#[derive(Debug, Clone)]
-pub enum CPUError {
-    CPUNotRunning,
 }
 
 pub struct CPU {

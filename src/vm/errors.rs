@@ -1,9 +1,10 @@
-use super::{cpu::CPUError, mmu::MMUError};
+use super::{cpu::CPUError, devices::DeviceError, mmu::MMUError};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum VMError {
     CPUError(CPUError),
     MMUError(MMUError),
+    DeviceError(DeviceError),
 }
 
 impl From<CPUError> for VMError {
@@ -15,5 +16,11 @@ impl From<CPUError> for VMError {
 impl From<MMUError> for VMError {
     fn from(err: MMUError) -> Self {
         VMError::MMUError(err)
+    }
+}
+
+impl From<DeviceError> for VMError {
+    fn from(err: DeviceError) -> Self {
+        VMError::DeviceError(err)
     }
 }

@@ -1,4 +1,3 @@
-
 use super::{Device, DeviceError};
 
 pub struct Stdout {}
