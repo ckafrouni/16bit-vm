@@ -4,7 +4,7 @@ use super::{
     mmu::MMU,
     op_code::{OpCode, Operand},
     reg::Reg,
-    VMError,
+    ByteArray, VMError,
 };
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -108,10 +108,6 @@ impl CPU {
     pub fn get_mem(&self, addr: u32) -> u32 {
         self.mmu.read32(addr).unwrap()
     }
-
-    pub fn slice(&self, start: u32, end: u32) -> Result<Vec<u8>, VMError> {
-        self.mmu.slice(start, end).map_err(|err| err.into())
-    }
 }
 
 // Contains methods for stepping through the code
@@ -129,7 +125,7 @@ impl CPU {
         self.state = CPUState::Running;
 
         println!("Starting CPU state:");
-        println!("{:?}", self);
+        println!("{}", self.view_regs());
 
         while self.state == CPUState::Running {
             self.modified_regs.clear();
@@ -140,7 +136,7 @@ impl CPU {
                 _n_ops, self.ip, op, operands
             );
             self.execute(op, operands);
-            println!("{:?}", self);
+            println!("{}", self.view_regs());
         }
         Ok(self.r1)
     }
@@ -149,16 +145,13 @@ impl CPU {
         let mut _n_ops = 0;
         self.state = CPUState::Running;
 
-        println!("Starting CPU state:");
-        println!("{:?}", self);
-
         while self.state == CPUState::Running {
             self.modified_regs.clear();
             _n_ops += 1;
 
             let (op, operands) = self.fetch()?;
             println!(
-                "Step {:02}\nIP: {:08x} - {:?} {:?}",
+                "Step {:02}\nIP: 0x{:08x} - {:?} {:?}",
                 _n_ops, self.ip, op, operands
             );
 
@@ -172,11 +165,8 @@ impl CPU {
 
             self.execute(op, operands);
 
-            println!("{:?}", self);
+            println!("{}", self.view_regs());
         }
-
-        println!("Stack:");
-        println!("{:?}", self.mmu);
 
         Ok(self.r1)
     }
@@ -423,36 +413,44 @@ impl CPU {
     }
 }
 
-impl std::fmt::Debug for CPU {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl CPU {
+    pub fn view_window(&self, start_addr: u32, end_addr: u32) -> ByteArray {
+        let mut data = Vec::new();
+        for addr in start_addr..end_addr {
+            data.push(self.mmu.read8(addr).unwrap());
+        }
+        ByteArray::from(data, start_addr)
+    }
+
+    pub fn view_regs(&self) -> String {
         let header_line = "\x1B[34m┌──────┬──────────┐\x1B[0m";
-
         let sep = "\x1B[34m├──────┼──────────┤\x1B[0m";
-
         let footer_line = "\x1B[34m└──────┴──────────┘\x1B[0m";
 
+        let mut res = String::new();
+
         // Header
-        writeln!(
-            f,
-            "{}\n{}\n{}",
+        res.push_str(&format!(
+            "{}\n{}\n{}\n",
             header_line, "\x1B[34m│\x1B[0m regs \x1B[34m│\x1B[0m content  \x1B[34m│\x1B[0m", sep
-        )?;
+        ));
 
         let special_regs = [(Reg::IP, self.ip), (Reg::SP, self.sp), (Reg::BP, self.bp)];
 
         for (reg, val) in special_regs.iter() {
-            write!(f, "\x1B[34m│\x1B[0m {:?}   \x1B[34m│\x1B[0m", reg)?;
+            res.push_str(&format!("\x1B[34m│\x1B[0m {:?}   \x1B[34m│\x1B[0m", reg));
             // if register was modified during last instruction
             if self.modified_regs.contains(reg) {
-                writeln!(f, " \x1B[33m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val)?;
+                res.push_str(&format!(" \x1B[33m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val));
             } else if *val != 0 {
-                writeln!(f, " {:08x} \x1B[34m│\x1B[0m", val)?;
+                res.push_str(&format!(" {:08x} \x1B[34m│\x1B[0m", val));
             } else {
-                writeln!(f, " \x1B[2m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val)?;
+                res.push_str(&format!(" \x1B[2m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val));
             }
+            res.push_str("\n");
         }
 
-        writeln!(f, "{}", sep)?;
+        res.push_str(&format!("{}\n", sep));
 
         let general_regs = [
             (Reg::R1, self.r1),
@@ -466,18 +464,21 @@ impl std::fmt::Debug for CPU {
         ];
 
         for (reg, val) in general_regs.iter() {
-            write!(f, "\x1B[34m│\x1B[0m {:?}   \x1B[34m│\x1B[0m", reg)?;
+            res.push_str(&format!("\x1B[34m│\x1B[0m {:?}   \x1B[34m│\x1B[0m", reg));
             // if register was modified during last instruction
             if self.modified_regs.contains(reg) {
-                writeln!(f, " \x1B[33m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val)?;
+                res.push_str(&format!(" \x1B[33m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val));
             } else if *val != 0 {
-                writeln!(f, " {:08x} \x1B[34m│\x1B[0m", val)?;
+                res.push_str(&format!(" {:08x} \x1B[34m│\x1B[0m", val));
             } else {
-                writeln!(f, " \x1B[2m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val)?;
+                res.push_str(&format!(" \x1B[2m{:08x}\x1B[0m \x1B[34m│\x1B[0m", val));
             }
+            res.push_str("\n");
         }
 
         // Footer
-        writeln!(f, "{}", footer_line)
+        res.push_str(&format!("{}", footer_line));
+
+        res
     }
 }

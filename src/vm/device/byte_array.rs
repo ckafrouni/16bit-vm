@@ -4,7 +4,6 @@ use super::{Device, DeviceError};
 pub struct ByteArray {
     data: Vec<u8>,
     start: u32,
-    size: u32,
 }
 
 impl ByteArray {
@@ -12,7 +11,6 @@ impl ByteArray {
         Self {
             data: Vec::new(),
             start: 0,
-            size: 0,
         }
     }
 
@@ -20,27 +18,23 @@ impl ByteArray {
         Self {
             data: vec![0; size as usize],
             start: 0,
-            size: size as u32,
         }
     }
 
     pub fn from(data: Vec<u8>, start: u32) -> Self {
-        let size = data.len() as u32;
-        Self { data, start, size }
+        Self { data, start }
     }
 
     pub fn size(&self) -> u32 {
-        self.size
+        self.data.len() as u32
     }
 
     pub fn push8(&mut self, data: u8) {
         self.data.push(data);
-        self.size += 1;
     }
 
     pub fn push32(&mut self, data: u32) {
         self.data.append(&mut data.to_be_bytes().to_vec());
-        self.size += 4;
     }
 
     pub fn read8(&self, index: u32) -> u8 {
@@ -55,23 +49,11 @@ impl ByteArray {
             self.data[(index + 3) as usize],
         ])
     }
-
-    pub fn slice(&self, start: u32, end: u32) -> Self {
-        Self::from(self.data[start as usize..end as usize].to_vec(), start)
-    }
 }
 
 impl Device for ByteArray {
-    fn read(&self, addr: u32, size: u32) -> Result<Vec<u8>, DeviceError> {
-        if addr < self.start || addr + size >= self.start + self.size {
-            return Err(DeviceError::InvalidAddress);
-        }
-
-        Ok(self.data[(addr - self.start) as usize..(addr - self.start + size) as usize].to_vec())
-    }
-
     fn read8(&self, addr: u32) -> Result<u8, DeviceError> {
-        if addr < self.start || addr >= self.start + self.size {
+        if addr < self.start || addr >= self.start + self.size() {
             return Err(DeviceError::InvalidAddress);
         }
 
@@ -79,27 +61,15 @@ impl Device for ByteArray {
     }
 
     fn read32(&self, addr: u32) -> Result<u32, DeviceError> {
-        if addr < self.start || addr + 3 >= self.start + self.size {
+        if addr < self.start || addr + 3 >= self.start + self.size() {
             return Err(DeviceError::InvalidAddress);
         }
 
         Ok(self.read32(addr - self.start))
     }
 
-    fn write(&mut self, addr: u32, size: u32, value: u32) -> Result<(), DeviceError> {
-        if addr < self.start || addr + size >= self.start + self.size {
-            return Err(DeviceError::InvalidAddress);
-        }
-
-        for i in 0..size {
-            self.data[(addr - self.start + i) as usize] = ((value >> (i * 8)) & 0xff) as u8;
-        }
-
-        Ok(())
-    }
-
     fn write8(&mut self, addr: u32, value: u8) -> Result<(), DeviceError> {
-        if addr < self.start || addr >= self.start + self.size {
+        if addr < self.start || addr >= self.start + self.size() {
             return Err(DeviceError::InvalidAddress);
         }
 
@@ -108,15 +78,9 @@ impl Device for ByteArray {
     }
 
     fn write32(&mut self, addr: u32, value: u32) -> Result<(), DeviceError> {
-        if addr < self.start || addr + 3 >= self.start + self.size {
+        if addr < self.start || addr + 3 >= self.start + self.size() {
             return Err(DeviceError::InvalidAddress);
         }
-
-        println!(
-            "ByteArray::write32: {:#010x} <- {:#010x}",
-            (addr - self.start) as usize,
-            value
-        );
 
         let bytes = value.to_be_bytes();
         self.data[(addr - self.start) as usize] = bytes[0];
@@ -128,17 +92,6 @@ impl Device for ByteArray {
 }
 
 impl std::fmt::Debug for ByteArray {
-    /**
-     * │ address  │  0  1  2  3   4  5  6  7 │  8  9  a  b   c  d  e  f │ ascii
-     * ───────────┼──────────────────────────┼──────────────────────────┼─────────────────
-     * │ 00000000 │ 01 02 03 04  05 06 07 08 │ 09 0a 0b 0c  0d 0e 0f 10 │ ................
-     * │ 00000010 │ 11 12 13 14  15 16 17 18 │ 19 1a 1b 1c  1d 1e 1f 20 │ ................
-     * │ 00000020 │ 21 22 23 24  25 26 27 28 │ 29 2a 2b 2c  2d 2e 2f 30 │ !"#$%&'()*+,-./0
-     * │ 00000030 │ 00 00 00 00  00 00 00 00 │ 00 00 00 00  00 00 00 00 │ ................
-     * ───────────┼──────────────────────────┼──────────────────────────┼─────────────────
-     * │ 00000090 │ 00 00 12 34  56 78 9a bc │ de f0 00 00  00 00 00 00 │ ...4Vx..........
-     * │ 000000a0 │ 00 00 00 00  00 00 00 00 │ 00 00 00 00  00 00 00 00 │ ................
-     */
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let sep =
             "\x1B[34m├──────────┼───────────────────────────┼───────────────────────────┼──────────────────┤\x1B[0m";
@@ -148,6 +101,9 @@ impl std::fmt::Debug for ByteArray {
 
         let footer_line =
             "\x1B[34m└──────────┴───────────────────────────┴───────────────────────────┴──────────────────┘\x1B[0m";
+
+        let empty_line =
+            "\x1B[34m│ ········ │ ·· ·· ·· ·· - ·· ·· ·· ·· │ ·· ·· ·· ·· - ·· ·· ·· ·· │ ················ │\x1B[0m";
 
         // Header
         writeln!(
@@ -166,11 +122,12 @@ impl std::fmt::Debug for ByteArray {
                 None => {
                     if prev_empty {
                         continue;
-                    } else if i == 0 {
+                    } else if i != 0 {
                         prev_empty = true;
+                        writeln!(f, "{}", empty_line)?;
+                        continue;
                     } else {
-                        prev_empty = false;
-                        writeln!(f, "{}", sep)?;
+                        prev_empty = true;
                     }
                 }
             }
