@@ -1,14 +1,10 @@
 use std::env;
-use vm::{
-    devices::{self, ByteArray},
-    OpCode::*,
-    Reg::*,
+
+use baby_vm::vm::{
+    cpu::{CPUMode, OpCode::*, Reg::*, CPU},
+    devices::{self, ByteArray, Device},
+    AccessFlags, MMU,
 };
-
-use crate::vm::devices::Device;
-
-mod utils;
-mod vm;
 
 fn make_program() -> ByteArray {
     let mut prog = ByteArray::new();
@@ -71,14 +67,14 @@ fn main() {
     // 0x0000_0400 - 0x0000_04ff: stack (256 B)
     // Total: 1024 B mapped
 
-    let mut mmu = vm::MMU::new();
+    let mut mmu = MMU::new();
 
     // Program
     let _ = mmu.map(
         Box::new(make_program()),
         0x0000_0000,
         0x0000_0100,
-        vm::AccessFlags::ReadExecute,
+        AccessFlags::ReadExecute,
     );
 
     // Data
@@ -88,7 +84,7 @@ fn main() {
         Box::new(data),
         0x0000_0100,
         0x0000_0100,
-        vm::AccessFlags::ReadWrite,
+        AccessFlags::ReadWrite,
     );
 
     // Heap
@@ -98,7 +94,7 @@ fn main() {
         Box::new(heap),
         0x0000_0200,
         0x0000_0100,
-        vm::AccessFlags::ReadWrite,
+        AccessFlags::ReadWrite,
     );
 
     // Stack
@@ -106,7 +102,7 @@ fn main() {
         Box::new(ByteArray::new_with_size(0x0000_0100)), // 256 B
         0x0000_0400,
         0x0000_0100,
-        vm::AccessFlags::ReadWrite,
+        AccessFlags::ReadWrite,
     );
 
     println!("[{}:{}] # MMU: {:?}", file!(), line!(), mmu);
@@ -115,21 +111,21 @@ fn main() {
     let s = "Hello, world!\n";
     stdout.write(0x0000_0000, s.as_bytes()).unwrap();
 
-    let mut cpu = vm::CPU::new(mmu);
+    let mut cpu = CPU::new(mmu);
     cpu.set_reg(IP, 0x0000_0000);
     cpu.set_reg(SP, 0x0000_0500);
 
     let mode = match env::var("MODE") {
         Ok(val) => {
             if val == "int" {
-                vm::CPUMode::DebugInteractive
+                CPUMode::DebugInteractive
             } else if val == "dbg" {
-                vm::CPUMode::Debug
+                CPUMode::Debug
             } else {
-                vm::CPUMode::Release
+                CPUMode::Release
             }
         }
-        Err(_) => vm::CPUMode::Release,
+        Err(_) => CPUMode::Release,
     };
 
     let res = cpu.run(mode).unwrap();
